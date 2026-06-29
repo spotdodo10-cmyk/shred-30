@@ -539,13 +539,6 @@
           <div class="progress-list">
             <div class="progress-item">
               <div class="progress-header">
-                <span class="progress-name">💧 Air Putih</span>
-                <span class="progress-val" id="p-water">0/30 hari</span>
-              </div>
-              <div class="progress-track"><div class="progress-fill fill-blue" id="pb-water" style="width:0%"></div></div>
-            </div>
-            <div class="progress-item">
-              <div class="progress-header">
                 <span class="progress-name">🍽️ Makan Sesuai Plan</span>
                 <span class="progress-val" id="p-meal">0/30 hari</span>
               </div>
@@ -558,42 +551,14 @@
               </div>
               <div class="progress-track"><div class="progress-fill fill-purple" id="pb-workout" style="width:0%"></div></div>
             </div>
-            <div class="progress-item">
-              <div class="progress-header">
-                <span class="progress-name">😴 Tidur 7-8 jam</span>
-                <span class="progress-val" id="p-sleep">0/30 hari</span>
-              </div>
-              <div class="progress-track"><div class="progress-fill fill-fire" id="pb-sleep" style="width:0%"></div></div>
-            </div>
           </div>
         </div>
       </div>
 
       <!-- TODAY CHECKLIST -->
-      <div class="check-grid">
-        <div class="check-card">
-          <h3>🍽️ Makan Hari Ini</h3>
-          <div id="meal-plan-section"></div>
-        </div>
-        <div class="check-card">
-          <h3>💪 Habits Hari Ini</h3>
-          <div class="check-item" onclick="toggleCheck('water')">
-            <div class="check-box" id="c-water"></div>
-            <span class="check-label" id="l-water">Air putih 2.5-3L</span>
-          </div>
-          <div class="check-item" onclick="toggleCheck('sleep')">
-            <div class="check-box" id="c-sleep"></div>
-            <span class="check-label" id="l-sleep">Tidur 7-8 jam (semalam)</span>
-          </div>
-          <div class="check-item" onclick="toggleCheck('nosugar')">
-            <div class="check-box" id="c-nosugar"></div>
-            <span class="check-label" id="l-nosugar">Kopi/teh tanpa gula</span>
-          </div>
-          <div class="check-item" onclick="toggleCheck('cardio')">
-            <div class="check-box" id="c-cardio"></div>
-            <span class="check-label" id="l-cardio">Walking pad selesai</span>
-          </div>
-        </div>
+      <div class="check-card">
+        <h3>🍽️ Makan Hari Ini</h3>
+        <div id="meal-plan-section"></div>
       </div>
     </div>
 
@@ -778,7 +743,6 @@
     const profile = getProfile();
     if(!profile) { document.getElementById('setupModal').style.display='flex'; return; }
     document.getElementById('setupModal').style.display='none';
-    loadTodayChecks();
     updateDashboard();
     renderWorkoutPage();
   }
@@ -913,6 +877,22 @@
     return plan;
   }
 
+  // Counts days where every non-empty meal has been checked off —
+  // derived straight from the daily checklist, not from a saved weight check-in.
+  function getMealComplianceDays(profile) {
+    const plan = getOrInitMealPlan(profile);
+    const mealsWithItems = ['sarapan','siang','malam'].filter(k=>(plan[k]||[]).length>0);
+    if(!mealsWithItems.length) return 0;
+    let count = 0;
+    for(let i=0;i<localStorage.length;i++) {
+      const key = localStorage.key(i);
+      if(!key || !key.startsWith('shred_today_')) continue;
+      const checks = load(key, {});
+      if(mealsWithItems.every(k=>checks[k])) count++;
+    }
+    return count;
+  }
+
   function updateMealItemQty(mealKey, idx, value) {
     const plan = getMealPlan();
     const cat = FOOD_CATALOG[plan[mealKey][idx].food];
@@ -1029,20 +1009,14 @@
     }
 
     // Progress bars
-    const waterDays = checkins.filter(c=>c.water).length;
-    const mealDays = checkins.filter(c=>c.meal).length;
-    const sleepDays = checkins.filter(c=>c.sleep).length;
+    const mealDays = getMealComplianceDays(profile);
     const workoutLogs = getWorkoutLogs();
     const workoutSessions = Object.keys(workoutLogs).length;
 
-    document.getElementById('p-water').textContent = waterDays+'/30 hari';
     document.getElementById('p-meal').textContent = mealDays+'/30 hari';
-    document.getElementById('p-sleep').textContent = sleepDays+'/30 hari';
     document.getElementById('p-workout').textContent = workoutSessions+'/16 sesi';
 
-    document.getElementById('pb-water').style.width = (waterDays/30*100)+'%';
     document.getElementById('pb-meal').style.width = (mealDays/30*100)+'%';
-    document.getElementById('pb-sleep').style.width = (sleepDays/30*100)+'%';
     document.getElementById('pb-workout').style.width = Math.min(workoutSessions/16*100,100)+'%';
   }
 
@@ -1094,28 +1068,11 @@
   }
 
   // ===== CHECKLIST =====
-  function loadTodayChecks() {
-    const checks = getTodayChecks();
-    ['water','sleep','nosugar','cardio'].forEach(key=>{
-      const box = document.getElementById('c-'+key);
-      const lbl = document.getElementById('l-'+key);
-      if(!box) return;
-      if(checks[key]) {
-        box.classList.add('checked');
-        lbl.classList.add('done');
-      } else {
-        box.classList.remove('checked');
-        lbl.classList.remove('done');
-      }
-    });
-  }
-
   function toggleCheck(key) {
     const checks = getTodayChecks();
     checks[key] = !checks[key];
     saveTodayChecks(checks);
-    loadTodayChecks();
-    if(['sarapan','siang','malam'].includes(key)) updateDashboard();
+    updateDashboard();
   }
 
   // ===== CHECK-IN =====
@@ -1129,13 +1086,7 @@
     const checkins = getCheckins();
     const today = todayStr();
     const existing = checkins.findIndex(c=>c.date===today);
-    const profile = getProfile();
-    const plan = getOrInitMealPlan(profile);
-    const checks = getTodayChecks();
-    const mealComplete = ['sarapan','siang','malam'].every(k=>!(plan[k]||[]).length || checks[k]);
-    const entry = { date:today, weight, note,
-      water: checks.water||false, meal: mealComplete,
-      sleep: checks.sleep||false };
+    const entry = { date:today, weight, note };
 
     if(existing>=0) checkins[existing]=entry;
     else checkins.push(entry);
@@ -1165,15 +1116,18 @@
     const placeholderDuration = parseFloat(durationField.placeholder);
     const totalMin = targetDurationInput || placeholderDuration || (fastMin+slowMin)*4;
 
-    if(timerState.intervalId) clearInterval(timerState.intervalId);
-    closeTimer();
+    clearInterval(timerState.intervalId);
+    workoutSession = null;
     document.getElementById('tempo-track').style.display = 'none';
+    document.getElementById('timer-video').src = '';
     document.getElementById('timer-video-wrap').style.display = 'none';
+    const fastDuration = Math.max(5, Math.round(fastMin*60));
+    const slowDuration = Math.max(5, Math.round(slowMin*60));
     timerState = {
       type:'interval', fastSpeed, slowSpeed,
-      fastDuration: Math.round(fastMin*60), slowDuration: Math.round(slowMin*60),
-      phase:'fast', phaseRemaining: Math.round(fastMin*60),
-      totalElapsed:0, totalTarget: Math.round(totalMin*60),
+      fastDuration, slowDuration,
+      phase:'fast', phaseRemaining: fastDuration,
+      totalElapsed:0, totalTarget: Math.max(fastDuration, Math.round(totalMin*60)),
       running:true
     };
     document.getElementById('timerPanel').style.display = 'block';
@@ -1722,6 +1676,7 @@
       clearInterval(timerState.intervalId);
       document.getElementById('timer-toggle-btn').textContent = '▶ Lanjut';
     } else {
+      clearInterval(timerState.intervalId); // defensive: never let two intervals stack
       timerState.running = true;
       document.getElementById('timer-toggle-btn').textContent = '⏸ Pause';
       timerState.intervalId = setInterval(tickTimer, 1000);
@@ -2133,7 +2088,7 @@
 
     if(name==='history') renderHistory();
     if(name==='workout') renderWorkoutPage();
-    if(name==='dashboard') { loadTodayChecks(); updateDashboard(); }
+    if(name==='dashboard') { updateDashboard(); }
   }
 
   // ===== TOAST =====
