@@ -371,12 +371,34 @@
 
   /* RESPONSIVE */
   @media(max-width:640px) {
+    .container { padding:0 14px; }
     .ring-section { grid-template-columns:1fr; }
     .check-grid { grid-template-columns:1fr; }
     .form-grid { grid-template-columns:1fr; }
+    .modal .form-row { grid-template-columns:1fr; }
     .stat-value { font-size:24px; }
     .exercise-table table { min-width:680px; }
     .history-table table { min-width:480px; }
+
+    nav { flex-wrap:wrap;gap:12px;padding:16px 0; }
+    nav > div:last-child {
+      width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;
+      justify-content:flex-start;
+    }
+    .nav-tab { padding:8px 12px;font-size:12px;white-space:nowrap; }
+    nav .btn-secondary { white-space:nowrap;flex-shrink:0; }
+
+    .form-card, .check-card, .ring-wrapper, .timer-panel, .chart-card { padding:18px; }
+
+    .workout-section h3 { flex-wrap:wrap; }
+    .workout-section h3 button { margin-left:0!important;width:100%; }
+
+    .timer-panel-header { flex-wrap:wrap;gap:10px; }
+    .timer-panel-header h3 { font-size:15px; }
+    .timer-controls { flex-wrap:wrap; }
+    .timer-display { font-size:48px; }
+
+    .modal { padding:28px 22px; }
   }
 </style>
 </head>
@@ -1293,7 +1315,7 @@ function renderWorkoutPage() {
           <input type="number" id="wp-duration" placeholder="${wpTarget.duration}" value="${todayLog.wpDuration||''}">
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px;background:var(--surface2);border-radius:10px">
+      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px;background:var(--surface2);border-radius:10px;flex-wrap:wrap">
         <span style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;min-width:64px" id="wp-timer-display">00:00</span>
         <button class="btn-secondary" id="wp-timer-btn" onclick="toggleWpStopwatch()">▶ Mulai Jalan</button>
         <button class="btn-secondary" onclick="resetWpStopwatch()">↺ Reset</button>
@@ -1349,7 +1371,7 @@ function renderWorkoutPage() {
           <input type="number" id="wp-duration" placeholder="20" value="${todayLog.wpDuration||''}">
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px;background:var(--surface2);border-radius:10px">
+      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px;background:var(--surface2);border-radius:10px;flex-wrap:wrap">
         <span style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;min-width:64px" id="wp-timer-display">00:00</span>
         <button class="btn-secondary" id="wp-timer-btn" onclick="toggleWpStopwatch()">▶ Mulai Jalan</button>
         <button class="btn-secondary" onclick="resetWpStopwatch()">↺ Reset</button>
