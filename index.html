@@ -1,2051 +1,2155 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>30-Day Shred Tracker</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #080B14;
-    --surface: #0E1420;
-    --surface2: #151C2E;
-    --border: rgba(99,179,237,0.12);
-    --accent: #3B82F6;
-    --accent2: #06B6D4;
-    --accent3: #8B5CF6;
-    --fire: #F97316;
-    --green: #10B981;
-    --red: #EF4444;
-    --text: #F0F4FF;
-    --muted: #6B7FA3;
-    --card-glow: 0 0 40px rgba(59,130,246,0.08);
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Space Grotesk', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* BG GRID */
-  body::before {
-    content:'';
-    position:fixed;
-    inset:0;
-    background-image:
-      linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events:none;
-    z-index:0;
-  }
-
-  /* GLOW ORBS */
-  .orb {
-    position:fixed;
-    border-radius:50%;
-    filter:blur(80px);
-    pointer-events:none;
-    z-index:0;
-  }
-  .orb1 { width:400px;height:400px;background:rgba(59,130,246,0.12);top:-100px;right:-100px; }
-  .orb2 { width:300px;height:300px;background:rgba(139,92,246,0.10);bottom:100px;left:-80px; }
-  .orb3 { width:200px;height:200px;background:rgba(6,182,212,0.08);top:50%;left:50%; }
-
-  .container { max-width:900px;margin:0 auto;padding:0 20px;position:relative;z-index:1; }
-
-  /* NAV */
-  nav {
-    display:flex;align-items:center;justify-content:space-between;
-    padding:20px 0;
-    border-bottom:1px solid var(--border);
-    margin-bottom:32px;
-  }
-  .logo {
-    font-family:'Syne',sans-serif;
-    font-size:20px;font-weight:800;
-    background:linear-gradient(135deg,var(--accent),var(--accent2));
-    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  }
-  .nav-tabs { display:flex;gap:4px; }
-  .nav-tab {
-    padding:8px 16px;border-radius:8px;border:none;
-    background:transparent;color:var(--muted);
-    font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:500;
-    cursor:pointer;transition:all 0.2s;
-  }
-  .nav-tab.active, .nav-tab:hover {
-    background:var(--surface2);color:var(--text);
-  }
-
-  /* PAGES */
-  .page { display:none; }
-  .page.active { display:block; }
-
-  /* HERO STATS */
-  .hero-grid {
-    display:grid;grid-template-columns:1fr 1fr;gap:16px;
-    margin-bottom:24px;
-  }
-  .stat-card {
-    background:var(--surface);
-    border:1px solid var(--border);
-    border-radius:16px;padding:20px;
-    position:relative;overflow:hidden;
-    box-shadow:var(--card-glow);
-    transition:transform 0.2s,box-shadow 0.2s;
-  }
-  .stat-card:hover { transform:translateY(-2px);box-shadow:0 0 60px rgba(59,130,246,0.15); }
-  .stat-card::before {
-    content:'';position:absolute;inset:0;
-    background:linear-gradient(135deg,rgba(59,130,246,0.06),transparent);
-    pointer-events:none;
-  }
-  .stat-label { font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px; }
-  .stat-value { font-family:'Syne',sans-serif;font-size:32px;font-weight:800;line-height:1; }
-  .stat-unit { font-size:14px;color:var(--muted);margin-left:4px; }
-  .stat-delta { font-size:12px;margin-top:6px; }
-  .delta-good { color:var(--green); }
-  .delta-bad { color:var(--red); }
-
-  /* 3D RING */
-  .ring-section {
-    display:grid;grid-template-columns:280px 1fr;gap:24px;
-    margin-bottom:24px;align-items:center;
-  }
-  .ring-wrapper {
-    background:var(--surface);border:1px solid var(--border);
-    border-radius:20px;padding:28px;
-    display:flex;flex-direction:column;align-items:center;
-    box-shadow:var(--card-glow);
-  }
-  .ring-title { font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:20px; }
-  .ring-canvas-wrap { position:relative;width:200px;height:200px; }
-  canvas#ringCanvas { display:block; }
-  .ring-center {
-    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-    text-align:center;
-  }
-  .ring-day { font-family:'Syne',sans-serif;font-size:36px;font-weight:800;line-height:1; }
-  .ring-of { font-size:12px;color:var(--muted); }
-
-  /* PROGRESS BARS */
-  .progress-list { display:flex;flex-direction:column;gap:14px; }
-  .progress-item { }
-  .progress-header { display:flex;justify-content:space-between;margin-bottom:6px; }
-  .progress-name { font-size:13px;font-weight:500; }
-  .progress-val { font-size:13px;color:var(--muted); }
-  .progress-track {
-    height:8px;background:var(--surface2);border-radius:99px;overflow:hidden;
-  }
-  .progress-fill {
-    height:100%;border-radius:99px;
-    transition:width 0.8s cubic-bezier(0.4,0,0.2,1);
-  }
-  .fill-blue { background:linear-gradient(90deg,var(--accent),var(--accent2)); }
-  .fill-purple { background:linear-gradient(90deg,var(--accent3),#EC4899); }
-  .fill-fire { background:linear-gradient(90deg,var(--fire),#FCD34D); }
-  .fill-green { background:linear-gradient(90deg,var(--green),#34D399); }
-
-  /* CHECKLIST CARDS */
-  .check-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px; }
-  .check-card {
-    background:var(--surface);border:1px solid var(--border);
-    border-radius:16px;padding:20px;
-    box-shadow:var(--card-glow);
-  }
-  .check-card h3 { font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px; }
-  .check-item {
-    display:flex;align-items:center;gap:10px;
-    padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;
-    transition:opacity 0.2s;
-  }
-  .check-item:last-child { border-bottom:none; }
-  .check-box {
-    width:20px;height:20px;border-radius:6px;
-    border:2px solid var(--border);
-    display:flex;align-items:center;justify-content:center;
-    transition:all 0.2s;flex-shrink:0;
-  }
-  .check-box.checked { background:var(--green);border-color:var(--green); }
-  .check-box.checked::after { content:'✓';color:white;font-size:11px;font-weight:700; }
-  .check-label { font-size:14px; }
-  .check-label.done { text-decoration:line-through;color:var(--muted); }
-
-  /* FORM CARD */
-  .form-card {
-    background:var(--surface);border:1px solid var(--border);
-    border-radius:20px;padding:28px;
-    box-shadow:var(--card-glow);margin-bottom:24px;
-  }
-  .form-card h2 { font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:6px; }
-  .form-subtitle { font-size:13px;color:var(--muted);margin-bottom:24px; }
-  .form-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
-  .form-group { display:flex;flex-direction:column;gap:6px; }
-  .form-group.full { grid-column:1/-1; }
-  label { font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px; }
-  input[type=number], input[type=text], select {
-    background:var(--surface2);
-    border:1px solid var(--border);
-    border-radius:10px;padding:12px 14px;
-    color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:15px;
-    outline:none;transition:border-color 0.2s;width:100%;
-  }
-  input:focus, select:focus { border-color:var(--accent); }
-  select option { background:var(--surface2); }
-
-  .btn-primary {
-    background:linear-gradient(135deg,var(--accent),var(--accent2));
-    border:none;border-radius:10px;padding:14px 28px;
-    color:white;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;
-    cursor:pointer;transition:all 0.2s;margin-top:8px;
-    box-shadow:0 4px 20px rgba(59,130,246,0.3);
-  }
-  .btn-primary:hover { transform:translateY(-1px);box-shadow:0 8px 30px rgba(59,130,246,0.4); }
-  .btn-secondary {
-    background:var(--surface2);border:1px solid var(--border);
-    border-radius:10px;padding:10px 20px;
-    color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:500;
-    cursor:pointer;transition:all 0.2s;
-  }
-  .btn-secondary:hover { border-color:var(--accent);color:var(--accent); }
-
-  /* WORKOUT LOG */
-  .workout-section { margin-bottom:24px; }
-  .workout-section h3 {
-    font-family:'Syne',sans-serif;font-size:18px;font-weight:800;
-    margin-bottom:16px;display:flex;align-items:center;gap:10px;
-  }
-  .day-badge {
-    font-size:11px;padding:4px 10px;border-radius:99px;
-    background:linear-gradient(135deg,var(--accent3),#EC4899);
-    color:white;font-family:'Space Grotesk',sans-serif;font-weight:600;
-  }
-  .exercise-table {
-    background:var(--surface);border:1px solid var(--border);
-    border-radius:16px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;width:100%;
-    box-shadow:var(--card-glow);
-  }
-  .exercise-table table { width:100%;border-collapse:collapse; }
-  .exercise-table th {
-    padding:12px 16px;text-align:left;
-    font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;
-    background:var(--surface2);border-bottom:1px solid var(--border);
-  }
-  .exercise-table td {
-    padding:12px 16px;font-size:14px;
-    border-bottom:1px solid var(--border);
-  }
-  .exercise-table tr:last-child td { border-bottom:none; }
-  .exercise-table tr:hover td { background:rgba(59,130,246,0.04); }
-  .weight-input {
-    width:80px;background:var(--surface2);
-    border:1px solid var(--border);border-radius:6px;
-    padding:6px 8px;color:var(--text);
-    font-family:'Space Grotesk',sans-serif;font-size:14px;
-    outline:none;
-  }
-  .weight-input:focus { border-color:var(--accent); }
-  .done-toggle {
-    width:24px;height:24px;border-radius:6px;
-    border:2px solid var(--border);background:transparent;
-    cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;
-  }
-  .done-toggle.on { background:var(--green);border-color:var(--green); }
-  .done-toggle.on::after { content:'✓';color:white;font-size:12px;font-weight:700; }
-  .start-btn {
-    padding:6px 12px;font-size:13px;border-radius:8px;
-    background:var(--surface2);border:1px solid var(--border);
-    color:var(--text);cursor:pointer;transition:all 0.2s;
-  }
-  .start-btn:hover { border-color:var(--accent);color:var(--accent); }
-  .start-btn:disabled, .btn-primary:disabled, .btn-secondary:disabled {
-    opacity:0.4;cursor:not-allowed;
-  }
-  .start-btn:disabled { border-color:var(--green);color:var(--green); }
-  .start-btn:disabled:hover { border-color:var(--green);color:var(--green); }
-  .btn-primary:disabled:hover { transform:none;box-shadow:0 4px 20px rgba(59,130,246,0.3); }
-  .tempo-badge { font-size:11px;color:var(--muted);cursor:help; }
-
-  /* TIMER PANEL */
-  .timer-panel {
-    background:var(--surface);border:1px solid var(--border);
-    border-radius:20px;padding:28px;
-    box-shadow:0 0 60px rgba(59,130,246,0.15);margin-bottom:24px;
-    text-align:center;
-  }
-  .timer-panel-header {
-    display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;
-  }
-  .timer-panel-header h3 { font-family:'Syne',sans-serif;font-size:18px;font-weight:800; }
-  .timer-phase {
-    font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:2px;
-    margin-bottom:8px;transition:color 0.2s;
-  }
-  .timer-phase.down { color:var(--accent); }
-  .timer-phase.hold { color:var(--fire); }
-  .timer-phase.up { color:var(--green); }
-  .timer-display {
-    font-family:'Syne',sans-serif;font-size:64px;font-weight:800;line-height:1;margin-bottom:12px;
-  }
-  .timer-meta { font-size:13px;color:var(--muted);margin-bottom:20px; }
-  .timer-controls { display:flex;gap:10px;justify-content:center; }
-  .tempo-track {
-    width:64px;height:180px;margin:4px auto 16px;
-    background:var(--surface2);border:1px solid var(--border);border-radius:32px;
-    position:relative;
-  }
-  .tempo-dot {
-    width:48px;height:48px;border-radius:50%;position:absolute;left:8px;top:8px;
-    background:linear-gradient(135deg,var(--accent),var(--accent2));
-    box-shadow:0 0 20px rgba(59,130,246,0.5);
-  }
-  .tempo-dot.hold { animation:tempoPulse 0.6s ease-in-out infinite; }
-  @keyframes tempoPulse { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
-
-  /* HISTORY / CHART */
-  .chart-card {
-    background:var(--surface);border:1px solid var(--border);
-    border-radius:20px;padding:24px;
-    box-shadow:var(--card-glow);margin-bottom:24px;
-  }
-  .chart-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:20px; }
-  .chart-card h3 { font-family:'Syne',sans-serif;font-size:18px;font-weight:800; }
-  .chart-wrap { position:relative;height:200px; }
-  canvas#chartCanvas { width:100%!important; }
-
-  /* HISTORY TABLE */
-  .history-table {
-    background:var(--surface);border:1px solid var(--border);
-    border-radius:16px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
-    box-shadow:var(--card-glow);
-  }
-  .history-table table { width:100%;border-collapse:collapse; }
-  .history-table th {
-    padding:12px 16px;text-align:left;
-    font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;
-    background:var(--surface2);border-bottom:1px solid var(--border);
-  }
-  .history-table td { padding:12px 16px;font-size:14px;border-bottom:1px solid var(--border); }
-  .history-table tr:last-child td { border-bottom:none; }
-  .history-table tr:hover td { background:rgba(59,130,246,0.04); }
-
-  /* TOAST */
-  .toast {
-    position:fixed;bottom:24px;right:24px;
-    background:var(--green);color:white;
-    padding:12px 20px;border-radius:12px;
-    font-size:14px;font-weight:600;
-    transform:translateY(80px);opacity:0;
-    transition:all 0.3s;z-index:999;
-    box-shadow:0 8px 24px rgba(16,185,129,0.4);
-  }
-  .toast.show { transform:translateY(0);opacity:1; }
-
-  /* SETUP MODAL */
-  .modal-overlay {
-    position:fixed;inset:0;background:rgba(8,11,20,0.95);
-    display:flex;align-items:center;justify-content:center;
-    z-index:100;
-  }
-  .modal {
-    background:var(--surface);border:1px solid var(--border);
-    border-radius:24px;padding:40px;max-width:440px;width:90%;
-    box-shadow:0 0 80px rgba(59,130,246,0.2);
-    max-height:88vh;overflow-y:auto;
-  }
-  .modal .form-row { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
-  .modal h1 { font-family:'Syne',sans-serif;font-size:28px;font-weight:800;margin-bottom:8px; }
-  .modal p { color:var(--muted);font-size:14px;margin-bottom:28px;line-height:1.6; }
-  .modal .form-group { margin-bottom:16px; }
-
-  /* EMPTY STATE */
-  .empty-state {
-    text-align:center;padding:48px 24px;color:var(--muted);
-  }
-  .empty-icon { font-size:48px;margin-bottom:12px; }
-  .empty-state p { font-size:14px; }
-
-  /* RESPONSIVE */
-  @media(max-width:640px) {
-    .container { padding:0 14px; }
-    .ring-section { grid-template-columns:1fr; }
-    .check-grid { grid-template-columns:1fr; }
-    .form-grid { grid-template-columns:1fr; }
-    .modal .form-row { grid-template-columns:1fr; }
-    .stat-value { font-size:24px; }
-    .exercise-table table { min-width:680px; }
-    .history-table table { min-width:480px; }
-
-    nav { flex-wrap:wrap;gap:12px;padding:16px 0; }
-    nav > div:last-child {
-      width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;
-      justify-content:flex-start;
+  <!DOCTYPE html>
+  <html lang="id">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>30-Day Shred Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080B14;
+      --surface: #0E1420;
+      --surface2: #151C2E;
+      --border: rgba(99,179,237,0.12);
+      --accent: #3B82F6;
+      --accent2: #06B6D4;
+      --accent3: #8B5CF6;
+      --fire: #F97316;
+      --green: #10B981;
+      --red: #EF4444;
+      --text: #F0F4FF;
+      --muted: #6B7FA3;
+      --card-glow: 0 0 40px rgba(59,130,246,0.08);
     }
-    .nav-tab { padding:8px 12px;font-size:12px;white-space:nowrap; }
-    nav .btn-secondary { white-space:nowrap;flex-shrink:0; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
 
-    .form-card, .check-card, .ring-wrapper, .timer-panel, .chart-card { padding:18px; }
+    /* BG GRID */
+    body::before {
+      content:'';
+      position:fixed;
+      inset:0;
+      background-image:
+        linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events:none;
+      z-index:0;
+    }
 
-    .workout-section h3 { flex-wrap:wrap; }
-    .workout-section h3 button { margin-left:0!important;width:100%; }
+    /* GLOW ORBS */
+    .orb {
+      position:fixed;
+      border-radius:50%;
+      filter:blur(80px);
+      pointer-events:none;
+      z-index:0;
+    }
+    .orb1 { width:400px;height:400px;background:rgba(59,130,246,0.12);top:-100px;right:-100px; }
+    .orb2 { width:300px;height:300px;background:rgba(139,92,246,0.10);bottom:100px;left:-80px; }
+    .orb3 { width:200px;height:200px;background:rgba(6,182,212,0.08);top:50%;left:50%; }
 
-    .timer-panel-header { flex-wrap:wrap;gap:10px; }
-    .timer-panel-header h3 { font-size:15px; }
-    .timer-controls { flex-wrap:wrap; }
-    .timer-display { font-size:48px; }
+    .container { max-width:900px;margin:0 auto;padding:0 20px;position:relative;z-index:1; }
 
-    .modal { padding:28px 22px; }
+    /* NAV */
+    nav {
+      display:flex;align-items:center;justify-content:space-between;
+      padding:20px 0;
+      border-bottom:1px solid var(--border);
+      margin-bottom:32px;
+    }
+    .logo {
+      font-family:'Syne',sans-serif;
+      font-size:20px;font-weight:800;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    }
+    .nav-tabs { display:flex;gap:4px; }
+    .nav-tab {
+      padding:8px 16px;border-radius:8px;border:none;
+      background:transparent;color:var(--muted);
+      font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:500;
+      cursor:pointer;transition:all 0.2s;
+    }
+    .nav-tab.active, .nav-tab:hover {
+      background:var(--surface2);color:var(--text);
+    }
+
+    /* PAGES */
+    .page { display:none; }
+    .page.active { display:block; }
+
+    /* HERO STATS */
+    .hero-grid {
+      display:grid;grid-template-columns:1fr 1fr;gap:16px;
+      margin-bottom:24px;
+    }
+    .stat-card {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:16px;padding:20px;
+      position:relative;overflow:hidden;
+      box-shadow:var(--card-glow);
+      transition:transform 0.2s,box-shadow 0.2s;
+    }
+    .stat-card:hover { transform:translateY(-2px);box-shadow:0 0 60px rgba(59,130,246,0.15); }
+    .stat-card::before {
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(135deg,rgba(59,130,246,0.06),transparent);
+      pointer-events:none;
+    }
+    .stat-label { font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px; }
+    .stat-value { font-family:'Syne',sans-serif;font-size:32px;font-weight:800;line-height:1; }
+    .stat-unit { font-size:14px;color:var(--muted);margin-left:4px; }
+    .stat-delta { font-size:12px;margin-top:6px; }
+    .delta-good { color:var(--green); }
+    .delta-bad { color:var(--red); }
+
+    /* 3D RING */
+    .ring-section {
+      display:grid;grid-template-columns:280px 1fr;gap:24px;
+      margin-bottom:24px;align-items:center;
+    }
+    .ring-wrapper {
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:20px;padding:28px;
+      display:flex;flex-direction:column;align-items:center;
+      box-shadow:var(--card-glow);
+    }
+    .ring-title { font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:20px; }
+    .ring-canvas-wrap { position:relative;width:200px;height:200px; }
+    canvas#ringCanvas { display:block; }
+    .ring-center {
+      position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      text-align:center;
+    }
+    .ring-day { font-family:'Syne',sans-serif;font-size:36px;font-weight:800;line-height:1; }
+    .ring-of { font-size:12px;color:var(--muted); }
+
+    /* PROGRESS BARS */
+    .progress-list { display:flex;flex-direction:column;gap:14px; }
+    .progress-item { }
+    .progress-header { display:flex;justify-content:space-between;margin-bottom:6px; }
+    .progress-name { font-size:13px;font-weight:500; }
+    .progress-val { font-size:13px;color:var(--muted); }
+    .progress-track {
+      height:8px;background:var(--surface2);border-radius:99px;overflow:hidden;
+    }
+    .progress-fill {
+      height:100%;border-radius:99px;
+      transition:width 0.8s cubic-bezier(0.4,0,0.2,1);
+    }
+    .fill-blue { background:linear-gradient(90deg,var(--accent),var(--accent2)); }
+    .fill-purple { background:linear-gradient(90deg,var(--accent3),#EC4899); }
+    .fill-fire { background:linear-gradient(90deg,var(--fire),#FCD34D); }
+    .fill-green { background:linear-gradient(90deg,var(--green),#34D399); }
+
+    /* CHECKLIST CARDS */
+    .check-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px; }
+    .check-card {
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:16px;padding:20px;
+      box-shadow:var(--card-glow);
+    }
+    .check-card h3 { font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px; }
+    .check-item {
+      display:flex;align-items:center;gap:10px;
+      padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;
+      transition:opacity 0.2s;
+    }
+    .check-item:last-child { border-bottom:none; }
+    .check-box {
+      width:20px;height:20px;border-radius:6px;
+      border:2px solid var(--border);
+      display:flex;align-items:center;justify-content:center;
+      transition:all 0.2s;flex-shrink:0;
+    }
+    .check-box.checked { background:var(--green);border-color:var(--green); }
+    .check-box.checked::after { content:'✓';color:white;font-size:11px;font-weight:700; }
+    .check-label { font-size:14px; }
+    .check-label.done { text-decoration:line-through;color:var(--muted); }
+
+  /* MEAL PLAN EDITOR */
+  .meal-block { margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border); }
+  .meal-block:last-child { border-bottom:none;margin-bottom:0;padding-bottom:0; }
+  .meal-block-header { display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px; }
+  .meal-item-row { display:flex;align-items:center;gap:8px;margin-bottom:6px;padding-left:28px; }
+  .meal-item-name { flex:1;font-size:13px; }
+  .meal-item-qty {
+    flex:0 0 52px;width:52px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+    padding:3px 2px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:12px;
+    outline:none;text-align:center;-moz-appearance:textfield;appearance:textfield;
   }
-</style>
-</head>
-<body>
+  .meal-item-qty::-webkit-outer-spin-button,
+  .meal-item-qty::-webkit-inner-spin-button {
+    -webkit-appearance:none;margin:0;
+  }
+  .meal-item-unit { font-size:11px;color:var(--muted);width:56px; }
+  .meal-item-remove {
+    width:22px;height:22px;border-radius:6px;border:1px solid var(--border);background:transparent;
+    color:var(--muted);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;
+  }
+  .meal-item-remove:hover { border-color:var(--red);color:var(--red); }
+  .meal-add-row { display:flex;gap:8px;padding-left:28px;margin-top:4px; }
+  .meal-add-select {
+    flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+    padding:6px 8px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:12px;outline:none;
+  }
+  .meal-summary { font-size:11px;color:var(--muted);margin-top:4px; }
 
-<div class="orb orb1"></div>
-<div class="orb orb2"></div>
-<div class="orb orb3"></div>
+    /* FORM CARD */
+    .form-card {
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:20px;padding:28px;
+      box-shadow:var(--card-glow);margin-bottom:24px;
+    }
+    .form-card h2 { font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:6px; }
+    .form-subtitle { font-size:13px;color:var(--muted);margin-bottom:24px; }
+    .form-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
+    .form-group { display:flex;flex-direction:column;gap:6px; }
+    .form-group.full { grid-column:1/-1; }
+    label { font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px; }
+    input[type=number], input[type=text], select {
+      background:var(--surface2);
+      border:1px solid var(--border);
+      border-radius:10px;padding:12px 14px;
+      color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:15px;
+      outline:none;transition:border-color 0.2s;width:100%;
+    }
+    input:focus, select:focus { border-color:var(--accent); }
+    select option { background:var(--surface2); }
 
-<!-- SETUP MODAL -->
-<div class="modal-overlay" id="setupModal">
-  <div class="modal">
-    <h1 id="setupModalTitle">Mulai 30-Day Shred 🔥</h1>
-    <p id="setupModalSubtitle">Masukkan data awal kamu sekali aja. Data disimpan di browser ini.</p>
-    <div class="form-group">
-      <label>Nama</label>
-      <input type="text" id="setupName" placeholder="Nama kamu">
-    </div>
-    <div class="form-row">
+    .btn-primary {
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      border:none;border-radius:10px;padding:14px 28px;
+      color:white;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;
+      cursor:pointer;transition:all 0.2s;margin-top:8px;
+      box-shadow:0 4px 20px rgba(59,130,246,0.3);
+    }
+    .btn-primary:hover { transform:translateY(-1px);box-shadow:0 8px 30px rgba(59,130,246,0.4); }
+    .btn-secondary {
+      background:var(--surface2);border:1px solid var(--border);
+      border-radius:10px;padding:10px 20px;
+      color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:500;
+      cursor:pointer;transition:all 0.2s;
+    }
+    .btn-secondary:hover { border-color:var(--accent);color:var(--accent); }
+
+    /* WORKOUT LOG */
+    .workout-section { margin-bottom:24px; }
+    .workout-section h3 {
+      font-family:'Syne',sans-serif;font-size:18px;font-weight:800;
+      margin-bottom:16px;display:flex;align-items:center;gap:10px;
+    }
+    .day-badge {
+      font-size:11px;padding:4px 10px;border-radius:99px;
+      background:linear-gradient(135deg,var(--accent3),#EC4899);
+      color:white;font-family:'Space Grotesk',sans-serif;font-weight:600;
+    }
+    .exercise-table {
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:16px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;width:100%;
+      box-shadow:var(--card-glow);
+    }
+    .exercise-table table { width:100%;border-collapse:collapse; }
+    .exercise-table th {
+      padding:12px 16px;text-align:left;
+      font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;
+      background:var(--surface2);border-bottom:1px solid var(--border);
+    }
+    .exercise-table td {
+      padding:12px 16px;font-size:14px;
+      border-bottom:1px solid var(--border);
+    }
+    .exercise-table tr:last-child td { border-bottom:none; }
+    .exercise-table tr:hover td { background:rgba(59,130,246,0.04); }
+    .weight-input {
+      width:80px;background:var(--surface2);
+      border:1px solid var(--border);border-radius:6px;
+      padding:6px 8px;color:var(--text);
+      font-family:'Space Grotesk',sans-serif;font-size:14px;
+      outline:none;
+    }
+    .weight-input:focus { border-color:var(--accent); }
+    .done-toggle {
+      width:24px;height:24px;border-radius:6px;
+      border:2px solid var(--border);background:transparent;
+      cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;
+    }
+    .done-toggle.on { background:var(--green);border-color:var(--green); }
+    .done-toggle.on::after { content:'✓';color:white;font-size:12px;font-weight:700; }
+    .start-btn {
+      padding:6px 12px;font-size:13px;border-radius:8px;
+      background:var(--surface2);border:1px solid var(--border);
+      color:var(--text);cursor:pointer;transition:all 0.2s;
+    }
+    .start-btn:hover { border-color:var(--accent);color:var(--accent); }
+    .start-btn:disabled, .btn-primary:disabled, .btn-secondary:disabled {
+      opacity:0.4;cursor:not-allowed;
+    }
+    .start-btn:disabled { border-color:var(--green);color:var(--green); }
+    .start-btn:disabled:hover { border-color:var(--green);color:var(--green); }
+    .btn-primary:disabled:hover { transform:none;box-shadow:0 4px 20px rgba(59,130,246,0.3); }
+    .tempo-badge { font-size:11px;color:var(--muted);cursor:help; }
+
+    /* TIMER PANEL */
+    .timer-panel {
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:20px;padding:28px;
+      box-shadow:0 0 60px rgba(59,130,246,0.15);margin-bottom:24px;
+      text-align:center;
+    }
+    .timer-panel-header {
+      display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;
+    }
+    .timer-panel-header h3 { font-family:'Syne',sans-serif;font-size:18px;font-weight:800; }
+    .timer-phase {
+      font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:2px;
+      margin-bottom:8px;transition:color 0.2s;
+    }
+    .timer-phase.down { color:var(--accent); }
+    .timer-phase.hold { color:var(--fire); }
+    .timer-phase.up { color:var(--green); }
+    .timer-display {
+      font-family:'Syne',sans-serif;font-size:64px;font-weight:800;line-height:1;margin-bottom:12px;
+    }
+    .timer-meta { font-size:13px;color:var(--muted);margin-bottom:20px; }
+    .timer-controls { display:flex;gap:10px;justify-content:center; }
+    .tempo-track {
+      width:64px;height:180px;margin:4px auto 16px;
+      background:var(--surface2);border:1px solid var(--border);border-radius:32px;
+      position:relative;
+    }
+    .tempo-dot {
+      width:48px;height:48px;border-radius:50%;position:absolute;left:8px;top:8px;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      box-shadow:0 0 20px rgba(59,130,246,0.5);
+    }
+    .tempo-dot.hold { animation:tempoPulse 0.6s ease-in-out infinite; }
+    @keyframes tempoPulse { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
+
+    /* HISTORY / CHART */
+    .chart-card {
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:20px;padding:24px;
+      box-shadow:var(--card-glow);margin-bottom:24px;
+    }
+    .chart-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:20px; }
+    .chart-card h3 { font-family:'Syne',sans-serif;font-size:18px;font-weight:800; }
+    .chart-wrap { position:relative;height:200px; }
+    canvas#chartCanvas { width:100%!important; }
+
+    /* HISTORY TABLE */
+    .history-table {
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:16px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+      box-shadow:var(--card-glow);
+    }
+    .history-table table { width:100%;border-collapse:collapse; }
+    .history-table th {
+      padding:12px 16px;text-align:left;
+      font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;
+      background:var(--surface2);border-bottom:1px solid var(--border);
+    }
+    .history-table td { padding:12px 16px;font-size:14px;border-bottom:1px solid var(--border); }
+    .history-table tr:last-child td { border-bottom:none; }
+    .history-table tr:hover td { background:rgba(59,130,246,0.04); }
+
+    /* TOAST */
+    .toast {
+      position:fixed;bottom:24px;right:24px;
+      background:var(--green);color:white;
+      padding:12px 20px;border-radius:12px;
+      font-size:14px;font-weight:600;
+      transform:translateY(80px);opacity:0;
+      transition:all 0.3s;z-index:999;
+      box-shadow:0 8px 24px rgba(16,185,129,0.4);
+    }
+    .toast.show { transform:translateY(0);opacity:1; }
+
+    /* SETUP MODAL */
+    .modal-overlay {
+      position:fixed;inset:0;background:rgba(8,11,20,0.95);
+      display:flex;align-items:center;justify-content:center;
+      z-index:100;
+    }
+    .modal {
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:24px;padding:40px;max-width:440px;width:90%;
+      box-shadow:0 0 80px rgba(59,130,246,0.2);
+      max-height:88vh;overflow-y:auto;
+    }
+    .modal .form-row { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+    .modal h1 { font-family:'Syne',sans-serif;font-size:28px;font-weight:800;margin-bottom:8px; }
+    .modal p { color:var(--muted);font-size:14px;margin-bottom:28px;line-height:1.6; }
+    .modal .form-group { margin-bottom:16px; }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align:center;padding:48px 24px;color:var(--muted);
+    }
+    .empty-icon { font-size:48px;margin-bottom:12px; }
+    .empty-state p { font-size:14px; }
+
+    /* RESPONSIVE */
+    @media(max-width:640px) {
+      .container { padding:0 14px; }
+      .ring-section { grid-template-columns:1fr; }
+      .check-grid { grid-template-columns:1fr; }
+      .form-grid { grid-template-columns:1fr; }
+      .modal .form-row { grid-template-columns:1fr; }
+      .stat-value { font-size:24px; }
+      .exercise-table table { min-width:680px; }
+      .history-table table { min-width:480px; }
+
+      nav { flex-wrap:wrap;gap:12px;padding:16px 0; }
+      nav > div:last-child {
+        width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;
+        justify-content:flex-start;
+      }
+      .nav-tab { padding:8px 12px;font-size:12px;white-space:nowrap; }
+      nav .btn-secondary { white-space:nowrap;flex-shrink:0; }
+
+      .form-card, .check-card, .ring-wrapper, .timer-panel, .chart-card { padding:18px; }
+
+      .workout-section h3 { flex-wrap:wrap; }
+      .workout-section h3 button { margin-left:0!important;width:100%; }
+
+      .timer-panel-header { flex-wrap:wrap;gap:10px; }
+      .timer-panel-header h3 { font-size:15px; }
+      .timer-controls { flex-wrap:wrap; }
+      .timer-display { font-size:48px; }
+
+      .modal { padding:28px 22px; }
+    }
+  </style>
+  </head>
+  <body>
+
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+
+  <!-- SETUP MODAL -->
+  <div class="modal-overlay" id="setupModal">
+    <div class="modal">
+      <h1 id="setupModalTitle">Mulai 30-Day Shred 🔥</h1>
+      <p id="setupModalSubtitle">Masukkan data awal kamu sekali aja. Data disimpan di browser ini.</p>
       <div class="form-group">
-        <label>Berat Awal (kg)</label>
-        <input type="number" id="setupWeight" placeholder="73" step="0.1" min="20" max="300">
+        <label>Nama</label>
+        <input type="text" id="setupName" placeholder="Nama kamu">
       </div>
-      <div class="form-group">
-        <label>Tinggi (cm)</label>
-        <input type="number" id="setupHeight" placeholder="173" min="100" max="250">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Umur</label>
-        <input type="number" id="setupAge" placeholder="28" min="10" max="100">
-      </div>
-      <div class="form-group">
-        <label>Gender</label>
-        <select id="setupGender">
-          <option value="pria">Pria</option>
-          <option value="wanita">Wanita</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Fitness Level</label>
-      <select id="setupFitnessLevel">
-        <option value="pemula">Pemula — jarang/gak pernah olahraga</option>
-        <option value="menengah">Menengah — rutin olahraga ringan</option>
-        <option value="mahir">Mahir — rutin angkat beban</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Tujuan</label>
-      <select id="setupGoal">
-        <option value="fatloss">Fat Loss — fokus kurus dulu</option>
-        <option value="recomposition" selected>Body Recomposition — kurus + bentuk otot</option>
-        <option value="muscle">Muscle Building — fokus bangun otot</option>
-      </select>
-    </div>
-    <button class="btn-primary" id="setupModalBtn" onclick="setupProfile()" style="width:100%">Mulai Sekarang →</button>
-  </div>
-</div>
-
-<!-- MAIN -->
-<div class="container">
-  <nav>
-    <div class="logo">SHRED30</div>
-    <div style="display:flex;align-items:center;gap:12px">
-      <div class="nav-tabs">
-        <button class="nav-tab active" onclick="showPage('dashboard',this)">Dashboard</button>
-        <button class="nav-tab" onclick="showPage('checkin',this)">Check-in</button>
-        <button class="nav-tab" onclick="showPage('workout',this)">Workout</button>
-        <button class="nav-tab" onclick="showPage('history',this)">History</button>
-      </div>
-      <button class="btn-secondary" style="padding:8px 14px;font-size:12px" onclick="openEditProfile()">✏️ Edit Profil</button>
-      <button class="btn-secondary" style="padding:8px 14px;font-size:12px" onclick="resetAllData()">🗑 Reset</button>
-    </div>
-  </nav>
-
-  <!-- DASHBOARD -->
-  <div class="page active" id="page-dashboard">
-    <div class="form-card" id="program-complete-banner" style="display:none;text-align:center;background:linear-gradient(135deg,rgba(59,130,246,0.12),rgba(139,92,246,0.12))">
-      <h2>🎉 30 Hari Selesai!</h2>
-      <p class="form-subtitle" id="program-complete-summary"></p>
-      <button class="btn-primary" onclick="restartCycle()">🔄 Mulai Cycle Baru</button>
-    </div>
-    <div class="hero-grid">
-      <div class="stat-card">
-        <div class="stat-label">Berat Sekarang</div>
-        <div><span class="stat-value" id="d-weight">—</span><span class="stat-unit">kg</span></div>
-        <div class="stat-delta" id="d-weight-delta"></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">BMI</div>
-        <div><span class="stat-value" id="d-bmi">—</span></div>
-        <div class="stat-delta" id="d-bmi-category"></div>
-      </div>
-    </div>
-
-    <div class="ring-section">
-      <div class="ring-wrapper">
-        <div class="ring-title">Progress</div>
-        <div class="ring-canvas-wrap">
-          <canvas id="ringCanvas" width="200" height="200"></canvas>
-          <div class="ring-center">
-            <div class="ring-day" id="ring-day">0</div>
-            <div class="ring-of">dari 30 hari</div>
-          </div>
-        </div>
-      </div>
-      <div>
-        <div class="progress-list">
-          <div class="progress-item">
-            <div class="progress-header">
-              <span class="progress-name">💧 Air Putih</span>
-              <span class="progress-val" id="p-water">0/30 hari</span>
-            </div>
-            <div class="progress-track"><div class="progress-fill fill-blue" id="pb-water" style="width:0%"></div></div>
-          </div>
-          <div class="progress-item">
-            <div class="progress-header">
-              <span class="progress-name">🍽️ Makan Sesuai Plan</span>
-              <span class="progress-val" id="p-meal">0/30 hari</span>
-            </div>
-            <div class="progress-track"><div class="progress-fill fill-green" id="pb-meal" style="width:0%"></div></div>
-          </div>
-          <div class="progress-item">
-            <div class="progress-header">
-              <span class="progress-name">🏋️ Workout</span>
-              <span class="progress-val" id="p-workout">0/16 sesi</span>
-            </div>
-            <div class="progress-track"><div class="progress-fill fill-purple" id="pb-workout" style="width:0%"></div></div>
-          </div>
-          <div class="progress-item">
-            <div class="progress-header">
-              <span class="progress-name">😴 Tidur 7-8 jam</span>
-              <span class="progress-val" id="p-sleep">0/30 hari</span>
-            </div>
-            <div class="progress-track"><div class="progress-fill fill-fire" id="pb-sleep" style="width:0%"></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TODAY CHECKLIST -->
-    <div class="check-grid">
-      <div class="check-card">
-        <h3>🍽️ Makan Hari Ini</h3>
-        <div id="meal-target-info" style="font-size:11px;color:var(--muted);margin-bottom:12px"></div>
-        <div class="check-item" onclick="toggleCheck('meal1')">
-          <div class="check-box" id="c-meal1"></div>
-          <span class="check-label" id="l-meal1">Siang: Indomie ½ bumbu + Telur 3 + Tempe 150g + Tahu 150g</span>
-        </div>
-        <div class="check-item" onclick="toggleCheck('meal2')">
-          <div class="check-box" id="c-meal2"></div>
-          <span class="check-label" id="l-meal2">Malam: Telur 3 + Tempe 100g + Tahu 100g</span>
-        </div>
-        <div class="check-item" onclick="toggleCheck('whey')">
-          <div class="check-box" id="c-whey"></div>
-          <span class="check-label" id="l-whey">Whey Protein 2 scoop (setelah makan malam)</span>
-        </div>
-      </div>
-      <div class="check-card">
-        <h3>💪 Habits Hari Ini</h3>
-        <div class="check-item" onclick="toggleCheck('water')">
-          <div class="check-box" id="c-water"></div>
-          <span class="check-label" id="l-water">Air putih 2.5-3L</span>
-        </div>
-        <div class="check-item" onclick="toggleCheck('sleep')">
-          <div class="check-box" id="c-sleep"></div>
-          <span class="check-label" id="l-sleep">Tidur 7-8 jam (semalam)</span>
-        </div>
-        <div class="check-item" onclick="toggleCheck('nosugar')">
-          <div class="check-box" id="c-nosugar"></div>
-          <span class="check-label" id="l-nosugar">Kopi/teh tanpa gula</span>
-        </div>
-        <div class="check-item" onclick="toggleCheck('cardio')">
-          <div class="check-box" id="c-cardio"></div>
-          <span class="check-label" id="l-cardio">Walking pad selesai</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- CHECK-IN -->
-  <div class="page" id="page-checkin">
-    <div class="form-card">
-      <h2>Daily Check-in</h2>
-      <div class="form-subtitle">Catat progress kamu hari ini. Ukur pagi sebelum makan.</div>
-      <div class="form-grid">
+      <div class="form-row">
         <div class="form-group">
-          <label>Berat Badan (kg)</label>
-          <input type="number" id="ci-weight" placeholder="73.0" step="0.1" min="20" max="300">
+          <label>Berat Awal (kg)</label>
+          <input type="number" id="setupWeight" placeholder="73" step="0.1" min="20" max="300">
         </div>
-        <div class="form-group full">
-          <label>Catatan</label>
-          <input type="text" id="ci-note" placeholder="Perasaan hari ini, sesuatu yang berbeda...">
+        <div class="form-group">
+          <label>Tinggi (cm)</label>
+          <input type="number" id="setupHeight" placeholder="173" min="100" max="250">
         </div>
       </div>
-      <button class="btn-primary" onclick="saveCheckin()">Simpan Check-in ✓</button>
-    </div>
-  </div>
-
-  <!-- WORKOUT -->
-  <div class="page" id="page-workout">
-    <div id="workout-content"></div>
-  </div>
-
-  <!-- HISTORY -->
-  <div class="page" id="page-history">
-    <div class="chart-card">
-      <div class="chart-header">
-        <h3>Grafik Berat Badan</h3>
-        <select id="chart-metric" onchange="renderChart()" style="padding:6px 12px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:13px;outline:none;">
-          <option value="weight">Berat (kg)</option>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Umur</label>
+          <input type="number" id="setupAge" placeholder="28" min="10" max="100">
+        </div>
+        <div class="form-group">
+          <label>Gender</label>
+          <select id="setupGender">
+            <option value="pria">Pria</option>
+            <option value="wanita">Wanita</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Fitness Level</label>
+        <select id="setupFitnessLevel">
+          <option value="pemula">Pemula — jarang/gak pernah olahraga</option>
+          <option value="menengah">Menengah — rutin olahraga ringan</option>
+          <option value="mahir">Mahir — rutin angkat beban</option>
         </select>
       </div>
-      <div class="chart-wrap">
-        <canvas id="chartCanvas"></canvas>
+      <div class="form-group">
+        <label>Tujuan</label>
+        <select id="setupGoal">
+          <option value="fatloss">Fat Loss — fokus kurus dulu</option>
+          <option value="recomposition" selected>Body Recomposition — kurus + bentuk otot</option>
+          <option value="muscle">Muscle Building — fokus bangun otot</option>
+        </select>
       </div>
-    </div>
-    <div class="history-table">
-      <table>
-        <thead>
-          <tr>
-            <th>Hari</th><th>Tanggal</th><th>Berat</th><th>Aksi</th>
-          </tr>
-        </thead>
-        <tbody id="history-body"></tbody>
-      </table>
+      <button class="btn-primary" id="setupModalBtn" onclick="setupProfile()" style="width:100%">Mulai Sekarang →</button>
     </div>
   </div>
 
-</div><!-- /container -->
+  <!-- MAIN -->
+  <div class="container">
+    <nav>
+      <div class="logo">SHRED30</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="nav-tabs">
+          <button class="nav-tab active" onclick="showPage('dashboard',this)">Dashboard</button>
+          <button class="nav-tab" onclick="showPage('checkin',this)">Check-in</button>
+          <button class="nav-tab" onclick="showPage('workout',this)">Workout</button>
+          <button class="nav-tab" onclick="showPage('history',this)">History</button>
+        </div>
+        <button class="btn-secondary" style="padding:8px 14px;font-size:12px" onclick="openEditProfile()">✏️ Edit Profil</button>
+        <button class="btn-secondary" style="padding:8px 14px;font-size:12px" onclick="resetAllData()">🗑 Reset</button>
+      </div>
+    </nav>
 
-<div class="toast" id="toast"></div>
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="form-card" id="program-complete-banner" style="display:none;text-align:center;background:linear-gradient(135deg,rgba(59,130,246,0.12),rgba(139,92,246,0.12))">
+        <h2>🎉 30 Hari Selesai!</h2>
+        <p class="form-subtitle" id="program-complete-summary"></p>
+        <button class="btn-primary" onclick="restartCycle()">🔄 Mulai Cycle Baru</button>
+      </div>
+      <div class="hero-grid">
+        <div class="stat-card">
+          <div class="stat-label">Berat Sekarang</div>
+          <div><span class="stat-value" id="d-weight">—</span><span class="stat-unit">kg</span></div>
+          <div class="stat-delta" id="d-weight-delta"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">BMI</div>
+          <div><span class="stat-value" id="d-bmi">—</span></div>
+          <div class="stat-delta" id="d-bmi-category"></div>
+        </div>
+      </div>
 
-<script>
-// ===== DATA =====
-const WORKOUT_PLAN = {
-  1: { name:'Upper Push', day:'Senin', warmupTip:'Arm circles 30s, jumping jack ringan 30s, shoulder rotation 30s, push-up plank hold 30s — ulang 2x', exercises:[
-    {name:'Pemanasan Dinamis',sets:1,reps:'5 menit',muscle:'Warm-up',alat:'—',defaultWeight:0,videoId:'LKSC_KujZ4g'},
-    {name:'DB Floor Press',sets:3,reps:'12',muscle:'Dada',alat:'DB',defaultWeight:5,tempo:[2,1,2],equipmentOptions:['DB','BB'],equipmentRatio:{DB:1,BB:2}},
-    {name:'DB Shoulder Press',sets:3,reps:'12',muscle:'Bahu',alat:'DB',defaultWeight:4,tempo:[2,1,2],equipmentOptions:['DB','BB'],equipmentRatio:{DB:1,BB:2}},
-    {name:'DB Lateral Raise',sets:3,reps:'15',muscle:'Bahu',alat:'DB',defaultWeight:3,tempo:[2,0,2],equipmentOptions:['DB'],equipmentRatio:{DB:1}},
-    {name:'KB Overhead Press',sets:3,reps:'10',muscle:'Bahu',alat:'KB',defaultWeight:4,tempo:[2,1,2],equipmentOptions:['KB','DB'],equipmentRatio:{KB:1,DB:1}},
-    {name:'Tricep Kickback',sets:3,reps:'12',muscle:'Tricep',alat:'DB',defaultWeight:3,tempo:[1,1,2],equipmentOptions:['DB'],equipmentRatio:{DB:1}},
-  ]},
-  2: { name:'Lower Body', day:'Rabu', warmupTip:'Bodyweight squat 30s, leg swing 30s/kaki, hip circle 30s, walking lunge tanpa beban 30s — ulang 2x', exercises:[
-    {name:'Pemanasan Dinamis',sets:1,reps:'5 menit',muscle:'Warm-up',alat:'—',defaultWeight:0,videoId:'LKSC_KujZ4g'},
-    {name:'Goblet Squat',sets:3,reps:'15',muscle:'Paha',alat:'KB',defaultWeight:8,tempo:[3,1,1],equipmentOptions:['KB','DB'],equipmentRatio:{KB:1,DB:1}},
-    {name:'Barbell Romanian Deadlift',sets:3,reps:'12',muscle:'Hamstring',alat:'BB',defaultWeight:8,tempo:[3,1,1],equipmentOptions:['BB','DB','KB'],equipmentRatio:{BB:1,DB:1,KB:1}},
-    {name:'DB Lunges',sets:3,reps:'10/kaki',muscle:'Paha',alat:'DB',defaultWeight:5,tempo:[2,1,2],equipmentOptions:['DB','KB'],equipmentRatio:{DB:1,KB:1}},
-    {name:'KB Swing',sets:3,reps:'15',muscle:'Full Body',alat:'KB',defaultWeight:8,explosive:true,equipmentOptions:['KB','DB'],equipmentRatio:{KB:1,DB:1}},
-    {name:'Calf Raise + DB',sets:3,reps:'20',muscle:'Betis',alat:'DB',defaultWeight:5,tempo:[2,2,2],equipmentOptions:['DB','KB','BB'],equipmentRatio:{DB:1,KB:1,BB:1}},
-  ]},
-  3: { name:'Upper Pull', day:'Jumat', warmupTip:'Arm circles 30s, cat-cow stretch 30s, torso twist 30s, gerakan tarik tanpa beban 30s — ulang 2x', exercises:[
-    {name:'Pemanasan Dinamis',sets:1,reps:'5 menit',muscle:'Warm-up',alat:'—',defaultWeight:0,videoId:'LKSC_KujZ4g'},
-    {name:'Barbell Row',sets:3,reps:'12',muscle:'Punggung',alat:'BB',defaultWeight:8,tempo:[2,1,2],equipmentOptions:['BB','DB'],equipmentRatio:{BB:1,DB:0.5}},
-    {name:'DB Reverse Fly',sets:3,reps:'12',muscle:'Punggung',alat:'DB',defaultWeight:3,tempo:[2,1,2],equipmentOptions:['DB'],equipmentRatio:{DB:1}},
-    {name:'Barbell Curl',sets:3,reps:'12',muscle:'Bicep',alat:'BB',defaultWeight:5,tempo:[2,1,2],equipmentOptions:['BB','DB'],equipmentRatio:{BB:1,DB:0.5}},
-    {name:'Barbell Deadlift',sets:3,reps:'12',muscle:'Punggung',alat:'BB',defaultWeight:8,tempo:[3,1,1],equipmentOptions:['BB','DB','KB'],equipmentRatio:{BB:1,DB:1,KB:1}},
-    {name:'Barbell Shrug',sets:3,reps:'15',muscle:'Trapezius',alat:'BB',defaultWeight:8,tempo:[1,2,1],equipmentOptions:['BB','DB'],equipmentRatio:{BB:1,DB:0.5}},
-  ]},
-  4: { name:'Cardio', day:'Sabtu', exercises:[
-    {name:'Walking Pad Warm Up',sets:1,reps:'5 menit',muscle:'Cardio',alat:'—',defaultWeight:0},
-    {name:'Walking Pad Main',sets:1,reps:'25-35 menit',muscle:'Cardio',alat:'—',defaultWeight:0},
-    {name:'KB Swing',sets:3,reps:'20',muscle:'Full Body',alat:'KB',defaultWeight:8,explosive:true,equipmentOptions:['KB','DB'],equipmentRatio:{KB:1,DB:1}},
-    {name:'Plank',sets:3,reps:'30 detik',muscle:'Core',alat:'—',defaultWeight:0},
-  ]},
-};
+      <div class="ring-section">
+        <div class="ring-wrapper">
+          <div class="ring-title">Progress</div>
+          <div class="ring-canvas-wrap">
+            <canvas id="ringCanvas" width="200" height="200"></canvas>
+            <div class="ring-center">
+              <div class="ring-day" id="ring-day">0</div>
+              <div class="ring-of">dari 30 hari</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="progress-list">
+            <div class="progress-item">
+              <div class="progress-header">
+                <span class="progress-name">💧 Air Putih</span>
+                <span class="progress-val" id="p-water">0/30 hari</span>
+              </div>
+              <div class="progress-track"><div class="progress-fill fill-blue" id="pb-water" style="width:0%"></div></div>
+            </div>
+            <div class="progress-item">
+              <div class="progress-header">
+                <span class="progress-name">🍽️ Makan Sesuai Plan</span>
+                <span class="progress-val" id="p-meal">0/30 hari</span>
+              </div>
+              <div class="progress-track"><div class="progress-fill fill-green" id="pb-meal" style="width:0%"></div></div>
+            </div>
+            <div class="progress-item">
+              <div class="progress-header">
+                <span class="progress-name">🏋️ Workout</span>
+                <span class="progress-val" id="p-workout">0/16 sesi</span>
+              </div>
+              <div class="progress-track"><div class="progress-fill fill-purple" id="pb-workout" style="width:0%"></div></div>
+            </div>
+            <div class="progress-item">
+              <div class="progress-header">
+                <span class="progress-name">😴 Tidur 7-8 jam</span>
+                <span class="progress-val" id="p-sleep">0/30 hari</span>
+              </div>
+              <div class="progress-track"><div class="progress-fill fill-fire" id="pb-sleep" style="width:0%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-// Map week/cycle to workout type
-function getWorkoutForDay(dayNum) {
-  if(dayNum < 1) return null;
-  const cycle = [1,null,2,null,3,4,null]; // Mon,Tue,Wed,Thu,Fri,Sat,Sun
-  const idx = (dayNum-1) % 7;
-  return cycle[idx] ? WORKOUT_PLAN[cycle[idx]] : null;
-}
+      <!-- TODAY CHECKLIST -->
+      <div class="check-grid">
+        <div class="check-card">
+          <h3>🍽️ Makan Hari Ini</h3>
+          <div id="meal-plan-section"></div>
+        </div>
+        <div class="check-card">
+          <h3>💪 Habits Hari Ini</h3>
+          <div class="check-item" onclick="toggleCheck('water')">
+            <div class="check-box" id="c-water"></div>
+            <span class="check-label" id="l-water">Air putih 2.5-3L</span>
+          </div>
+          <div class="check-item" onclick="toggleCheck('sleep')">
+            <div class="check-box" id="c-sleep"></div>
+            <span class="check-label" id="l-sleep">Tidur 7-8 jam (semalam)</span>
+          </div>
+          <div class="check-item" onclick="toggleCheck('nosugar')">
+            <div class="check-box" id="c-nosugar"></div>
+            <span class="check-label" id="l-nosugar">Kopi/teh tanpa gula</span>
+          </div>
+          <div class="check-item" onclick="toggleCheck('cardio')">
+            <div class="check-box" id="c-cardio"></div>
+            <span class="check-label" id="l-cardio">Walking pad selesai</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
-// Scans all logged workout days and finds the heaviest weight ever recorded per exercise name
-function getExercisePRs() {
-  const profile = getProfile();
-  if(!profile) return {};
-  const logs = getWorkoutLogs();
-  const prs = {};
-  Object.keys(logs).forEach(dateKey=>{
-    const dayNum = Math.floor((new Date(dateKey)-new Date(profile.startDate))/(1000*60*60*24))+1;
-    const workout = getWorkoutForDay(dayNum);
-    if(!workout) return;
-    const log = logs[dateKey];
-    workout.exercises.forEach((ex,i)=>{
-      const w = parseFloat(log['ex_'+i+'_weight']);
-      if(!isNaN(w) && w>0 && (!prs[ex.name] || w>prs[ex.name])) prs[ex.name] = w;
-    });
-  });
-  return prs;
-}
+    <!-- CHECK-IN -->
+    <div class="page" id="page-checkin">
+      <div class="form-card">
+        <h2>Daily Check-in</h2>
+        <div class="form-subtitle">Catat progress kamu hari ini. Ukur pagi sebelum makan.</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Berat Badan (kg)</label>
+            <input type="number" id="ci-weight" placeholder="73.0" step="0.1" min="20" max="300">
+          </div>
+          <div class="form-group full">
+            <label>Catatan</label>
+            <input type="text" id="ci-note" placeholder="Perasaan hari ini, sesuatu yang berbeda...">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="saveCheckin()">Simpan Check-in ✓</button>
+      </div>
+    </div>
 
-// ===== STORAGE =====
-function load(key,def) { try{ return JSON.parse(localStorage.getItem(key))??def; }catch(e){ return def; } }
-function save(key,val) { localStorage.setItem(key,JSON.stringify(val)); }
+    <!-- WORKOUT -->
+    <div class="page" id="page-workout">
+      <div id="workout-content"></div>
+    </div>
 
-function getProfile() { return load('shred_profile',null); }
-function saveProfile(p) { save('shred_profile',p); }
-function getCheckins() { return load('shred_checkins',[]); }
-function saveCheckins(arr) { save('shred_checkins',arr); }
-function getTodayChecks() { return load('shred_today_'+todayStr(),{}); }
-function saveTodayChecks(obj) { save('shred_today_'+todayStr(),obj); }
-function getWorkoutLogs() { return load('shred_workouts',{}); }
-function saveWorkoutLog(dayKey,data) { const w=getWorkoutLogs(); w[dayKey]=data; save('shred_workouts',w); }
-function getEquipmentPrefs() { return load('shred_equipment_prefs',{}); }
-function saveEquipmentPrefs(prefs) { save('shred_equipment_prefs',prefs); }
-
-function resetAllData() {
-  if(!confirm('Yakin mau reset semua data? Profil, check-in, dan progress workout akan terhapus dan gak bisa dibalikin.')) return;
-  Object.keys(localStorage).filter(k=>k.startsWith('shred_')).forEach(k=>localStorage.removeItem(k));
-  location.reload();
-}
-
-function todayStr() {
-  return new Date().toISOString().slice(0,10);
-}
-
-// ===== SETUP =====
-function setupProfile() {
-  const name = document.getElementById('setupName').value.trim() || 'Bro';
-  const weight = parseFloat(document.getElementById('setupWeight').value);
-  const height = parseFloat(document.getElementById('setupHeight').value);
-  const age = parseInt(document.getElementById('setupAge').value);
-  const gender = document.getElementById('setupGender').value;
-  const fitnessLevel = document.getElementById('setupFitnessLevel').value;
-  const goal = document.getElementById('setupGoal').value;
-  if(!weight||!height||!age) { alert('Isi semua field ya!'); return; }
-  if(weight<20||weight>300) { alert('Berat badan gak valid (20-300 kg)'); return; }
-  if(height<100||height>250) { alert('Tinggi gak valid (100-250 cm)'); return; }
-  if(age<10||age>100) { alert('Umur gak valid (10-100 tahun)'); return; }
-  const existing = getProfile();
-  const profile = { name, startDate: existing?existing.startDate:todayStr(), startWeight:weight, height, age, gender, fitnessLevel, goal };
-  saveProfile(profile);
-  document.getElementById('setupModal').style.display='none';
-  initApp();
-}
-
-function openEditProfile() {
-  const profile = getProfile();
-  if(!profile) return;
-  document.getElementById('setupName').value = profile.name||'';
-  document.getElementById('setupWeight').value = profile.startWeight||'';
-  document.getElementById('setupHeight').value = profile.height||'';
-  document.getElementById('setupAge').value = profile.age||'';
-  document.getElementById('setupGender').value = profile.gender||'pria';
-  document.getElementById('setupFitnessLevel').value = profile.fitnessLevel||'pemula';
-  document.getElementById('setupGoal').value = profile.goal||'recomposition';
-  document.getElementById('setupModalTitle').textContent = 'Edit Profil ✏️';
-  document.getElementById('setupModalSubtitle').textContent = 'Update data kamu. Tanggal mulai program gak akan berubah.';
-  document.getElementById('setupModalBtn').textContent = 'Simpan Perubahan ✓';
-  document.getElementById('setupModal').style.display = 'flex';
-}
-
-// ===== INIT =====
-function initApp() {
-  const profile = getProfile();
-  if(!profile) { document.getElementById('setupModal').style.display='flex'; return; }
-  document.getElementById('setupModal').style.display='none';
-  loadTodayChecks();
-  updateDashboard();
-  renderWorkoutPage();
-}
-
-// ===== DAY CALC =====
-function getCurrentDay() {
-  const profile = getProfile();
-  if(!profile) return 0;
-  const start = new Date(profile.startDate);
-  const now = new Date();
-  const diff = Math.floor((now-start)/(1000*60*60*24))+1;
-  return Math.min(diff,30);
-}
-
-function isProgramComplete() {
-  const profile = getProfile();
-  if(!profile) return false;
-  const start = new Date(profile.startDate);
-  const now = new Date();
-  const diff = Math.floor((now-start)/(1000*60*60*24))+1;
-  return diff > 30;
-}
-
-function restartCycle() {
-  if(!confirm('Mulai cycle 30 hari baru? History & check-in lama tetap tersimpan, cuma hari dihitung ulang dari hari ini.')) return;
-  const profile = getProfile();
-  profile.startDate = todayStr();
-  saveProfile(profile);
-  initApp();
-}
-
-// ===== DASHBOARD =====
-function calcBMI(weightKg, heightCm) {
-  if(!weightKg || !heightCm) return null;
-  const h = heightCm/100;
-  return weightKg/(h*h);
-}
-
-function bmiCategory(bmi) {
-  if(bmi<18.5) return { label:'Kurus', color:'var(--accent2)' };
-  if(bmi<23) return { label:'Normal', color:'var(--green)' };
-  if(bmi<25) return { label:'Berisiko', color:'var(--fire)' };
-  if(bmi<30) return { label:'Obesitas I', color:'var(--red)' };
-  return { label:'Obesitas II', color:'var(--red)' };
-}
-
-// ===== DYNAMIC MEAL PLAN =====
-const FOOD_MACROS = {
-  telur: { kkal:70, protein:6 },     // per butir
-  tempe: { kkal:1.9, protein:0.17 }, // per gram
-  tahu: { kkal:0.75, protein:0.08 }, // per gram
-  whey: { kkal:120, protein:25 },    // per scoop
-  indomie: { kkal:380, protein:8 },  // per bungkus (1/2 bumbu)
-};
-const BASE_PORTIONS = { telur1:3, tempe1:150, tahu1:150, telur2:3, tempe2:100, tahu2:100, whey:2 };
-const PROTEIN_PER_KG = { fatloss:2.2, recomposition:2.0, muscle:2.1 };
-const CALORIE_DEFICIT = { fatloss:500, recomposition:400, muscle:150 };
-
-function calcMealMacros(p) {
-  const kkal = (p.indomie||0)*FOOD_MACROS.indomie.kkal + (p.telur1+p.telur2)*FOOD_MACROS.telur.kkal
-    + (p.tempe1+p.tempe2)*FOOD_MACROS.tempe.kkal + (p.tahu1+p.tahu2)*FOOD_MACROS.tahu.kkal
-    + p.whey*FOOD_MACROS.whey.kkal;
-  const protein = (p.indomie||0)*FOOD_MACROS.indomie.protein + (p.telur1+p.telur2)*FOOD_MACROS.telur.protein
-    + (p.tempe1+p.tempe2)*FOOD_MACROS.tempe.protein + (p.tahu1+p.tahu2)*FOOD_MACROS.tahu.protein
-    + p.whey*FOOD_MACROS.whey.protein;
-  return { kkal:Math.round(kkal), protein:Math.round(protein) };
-}
-
-function calcNutritionTargets(profile) {
-  const weight = profile.currentWeight||profile.startWeight||70;
-  const height = profile.height||170;
-  const age = profile.age||28;
-  const gender = profile.gender||'pria';
-  const bmr = gender==='wanita'
-    ? 10*weight + 6.25*height - 5*age - 161
-    : 10*weight + 6.25*height - 5*age + 5;
-  const tdee = bmr*1.2;
-  const goal = profile.goal||'recomposition';
-  const calorieFloor = gender==='wanita' ? 1200 : 1500;
-  const targetCalories = Math.max(calorieFloor, Math.round(tdee - (CALORIE_DEFICIT[goal]||400)));
-  const targetProtein = Math.round(weight * (PROTEIN_PER_KG[goal]||2.0));
-  return { bmr:Math.round(bmr), tdee:Math.round(tdee), targetCalories, targetProtein };
-}
-
-function calcMealPlan(profile) {
-  const targets = calcNutritionTargets(profile);
-  const baseline = calcMealMacros(BASE_PORTIONS);
-  const ratio = targets.targetProtein / baseline.protein;
-  const portions = {
-    telur1: Math.min(6, Math.max(2, Math.round(BASE_PORTIONS.telur1*ratio))),
-    tempe1: Math.min(300, Math.max(50, Math.round(BASE_PORTIONS.tempe1*ratio/25)*25)),
-    tahu1: Math.min(300, Math.max(50, Math.round(BASE_PORTIONS.tahu1*ratio/25)*25)),
-    telur2: Math.min(6, Math.max(2, Math.round(BASE_PORTIONS.telur2*ratio))),
-    tempe2: Math.min(300, Math.max(50, Math.round(BASE_PORTIONS.tempe2*ratio/25)*25)),
-    tahu2: Math.min(300, Math.max(50, Math.round(BASE_PORTIONS.tahu2*ratio/25)*25)),
-    whey: Math.min(3, Math.max(1, Math.round(BASE_PORTIONS.whey*ratio*2)/2)),
-  };
-  // Indomie (karbo) diisi belakangan buat ngejar sisa target kalori —
-  // ini yang bikin Fat Loss/Recomposition/Muscle Building beda porsinya,
-  // karena defisit kalori per tujuan jauh lebih beda daripada target protein.
-  const proteinSourceCalories = calcMealMacros({ ...portions, indomie:0 }).kkal;
-  const carbCalorieNeed = targets.targetCalories - proteinSourceCalories;
-  const indomie = Math.min(2.5, Math.max(0.5, Math.round((carbCalorieNeed/FOOD_MACROS.indomie.kkal)*2)/2));
-  portions.indomie = indomie;
-  const actual = calcMealMacros(portions);
-  return { targets, portions, actual };
-}
-
-function renderMealPlan(profile) {
-  const plan = calcMealPlan(profile);
-  const p = plan.portions;
-  document.getElementById('l-meal1').textContent =
-    `Siang: Indomie ${p.indomie} bungkus (½ bumbu) + Telur ${p.telur1} + Tempe ${p.tempe1}g + Tahu ${p.tahu1}g`;
-  document.getElementById('l-meal2').textContent =
-    `Malam: Telur ${p.telur2} + Tempe ${p.tempe2}g + Tahu ${p.tahu2}g`;
-  document.getElementById('l-whey').textContent =
-    `Whey Protein ${p.whey} scoop (setelah makan malam)`;
-  document.getElementById('meal-target-info').textContent =
-    `Target: ~${plan.targets.targetCalories} kkal • ${plan.targets.targetProtein}g protein — estimasi menu ini: ~${plan.actual.kkal} kkal • ${plan.actual.protein}g protein`;
-}
-
-function updateDashboard() {
-  const profile = getProfile();
-  const checkins = getCheckins();
-  const day = getCurrentDay();
-
-  const complete = isProgramComplete();
-  document.getElementById('program-complete-banner').style.display = complete ? 'block' : 'none';
-  if(complete) {
-    const sessions = Object.keys(getWorkoutLogs()).length;
-    const latestW = checkins.length ? checkins[checkins.length-1].weight : null;
-    const weightChange = (latestW && profile.startWeight) ? (latestW-profile.startWeight).toFixed(1) : null;
-    document.getElementById('program-complete-summary').textContent = weightChange!==null
-      ? `Berat berubah ${weightChange>0?'+':''}${weightChange} kg dari awal • ${sessions} sesi workout tercatat. Mantap, ${profile.name}!`
-      : `${sessions} sesi workout tercatat. Mantap, ${profile.name}!`;
-  }
-
-  document.getElementById('ring-day').textContent = day;
-  drawRing(day/30);
-
-  const latest = checkins[checkins.length-1];
-  profile.currentWeight = latest&&latest.weight ? latest.weight : profile.startWeight;
-  renderMealPlan(profile);
-
-  if(latest) {
-    document.getElementById('d-weight').textContent = latest.weight??'—';
-    if(latest.weight && profile.startWeight) {
-      const d = (latest.weight-profile.startWeight).toFixed(1);
-      const el = document.getElementById('d-weight-delta');
-      el.textContent = (d>0?'+':'')+d+' kg dari awal';
-      el.className = 'stat-delta '+(d<=0?'delta-good':'delta-bad');
-    }
-  } else {
-    document.getElementById('d-weight').textContent = profile.startWeight;
-  }
-
-  const bmi = calcBMI(profile.currentWeight, profile.height);
-  if(bmi) {
-    document.getElementById('d-bmi').textContent = bmi.toFixed(1);
-    const cat = bmiCategory(bmi);
-    const catEl = document.getElementById('d-bmi-category');
-    catEl.textContent = cat.label;
-    catEl.style.color = cat.color;
-  } else {
-    document.getElementById('d-bmi').textContent = '—';
-  }
-
-  // Progress bars
-  const waterDays = checkins.filter(c=>c.water).length;
-  const mealDays = checkins.filter(c=>c.meal).length;
-  const sleepDays = checkins.filter(c=>c.sleep).length;
-  const workoutLogs = getWorkoutLogs();
-  const workoutSessions = Object.keys(workoutLogs).length;
-
-  document.getElementById('p-water').textContent = waterDays+'/30 hari';
-  document.getElementById('p-meal').textContent = mealDays+'/30 hari';
-  document.getElementById('p-sleep').textContent = sleepDays+'/30 hari';
-  document.getElementById('p-workout').textContent = workoutSessions+'/16 sesi';
-
-  document.getElementById('pb-water').style.width = (waterDays/30*100)+'%';
-  document.getElementById('pb-meal').style.width = (mealDays/30*100)+'%';
-  document.getElementById('pb-sleep').style.width = (sleepDays/30*100)+'%';
-  document.getElementById('pb-workout').style.width = Math.min(workoutSessions/16*100,100)+'%';
-}
-
-// ===== 3D RING =====
-function drawRing(pct) {
-  const canvas = document.getElementById('ringCanvas');
-  const ctx = canvas.getContext('2d');
-  const W=200,H=200,cx=100,cy=100,r=80,lw=16;
-  ctx.clearRect(0,0,W,H);
-
-  // Shadow ring
-  ctx.beginPath();
-  ctx.arc(cx,cy,r,0,Math.PI*2);
-  ctx.strokeStyle='rgba(59,130,246,0.08)';
-  ctx.lineWidth=lw+4;
-  ctx.stroke();
-
-  // BG ring
-  ctx.beginPath();
-  ctx.arc(cx,cy,r,0,Math.PI*2);
-  ctx.strokeStyle='rgba(255,255,255,0.06)';
-  ctx.lineWidth=lw;
-  ctx.stroke();
-
-  if(pct>0) {
-    // Gradient fill
-    const grad = ctx.createLinearGradient(cx-r,cy,cx+r,cy);
-    grad.addColorStop(0,'#3B82F6');
-    grad.addColorStop(0.5,'#06B6D4');
-    grad.addColorStop(1,'#8B5CF6');
-
-    ctx.beginPath();
-    ctx.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+Math.PI*2*pct);
-    ctx.strokeStyle=grad;
-    ctx.lineWidth=lw;
-    ctx.lineCap='round';
-    ctx.stroke();
-
-    // Glow
-    ctx.beginPath();
-    ctx.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+Math.PI*2*pct);
-    ctx.strokeStyle='rgba(59,130,246,0.3)';
-    ctx.lineWidth=lw+8;
-    ctx.lineCap='round';
-    ctx.globalCompositeOperation='destination-over';
-    ctx.stroke();
-    ctx.globalCompositeOperation='source-over';
-  }
-}
-
-// ===== CHECKLIST =====
-function loadTodayChecks() {
-  const checks = getTodayChecks();
-  ['meal1','meal2','whey','water','sleep','nosugar','cardio'].forEach(key=>{
-    const box = document.getElementById('c-'+key);
-    const lbl = document.getElementById('l-'+key);
-    if(checks[key]) {
-      box.classList.add('checked');
-      lbl.classList.add('done');
-    } else {
-      box.classList.remove('checked');
-      lbl.classList.remove('done');
-    }
-  });
-}
-
-function toggleCheck(key) {
-  const checks = getTodayChecks();
-  checks[key] = !checks[key];
-  saveTodayChecks(checks);
-  loadTodayChecks();
-}
-
-// ===== CHECK-IN =====
-function saveCheckin() {
-  const weight = parseFloat(document.getElementById('ci-weight').value);
-  const note = document.getElementById('ci-note').value;
-
-  if(!weight) { showToast('Masukkan berat badan dulu!','#EF4444'); return; }
-  if(weight<20||weight>300) { showToast('Berat badan gak valid (20-300 kg)','#EF4444'); return; }
-
-  const checkins = getCheckins();
-  const today = todayStr();
-  const existing = checkins.findIndex(c=>c.date===today);
-  const entry = { date:today, weight, note,
-    water: getTodayChecks().water||false, meal: (getTodayChecks().meal1&&getTodayChecks().meal2)||false,
-    sleep: getTodayChecks().sleep||false };
-
-  if(existing>=0) checkins[existing]=entry;
-  else checkins.push(entry);
-  saveCheckins(checkins);
-
-  document.getElementById('ci-weight').value='';
-  document.getElementById('ci-note').value='';
-
-  showToast('Check-in tersimpan! 💪');
-  updateDashboard();
-}
-
-// ===== WORKOUT PAGE =====
-let currentWorkoutExercises = [];
-let timerState = {};
-let workoutSession = null;
-let wpStopwatchSeconds = 0;
-let wpStopwatchInterval = null;
-
-function startWalkingInterval() {
-  const fastSpeed = parseFloat(document.getElementById('wp-fast-speed').value)||6;
-  const slowSpeed = parseFloat(document.getElementById('wp-slow-speed').value)||4;
-  const fastMin = parseFloat(document.getElementById('wp-fast-min').value)||2;
-  const slowMin = parseFloat(document.getElementById('wp-slow-min').value)||1;
-  const durationField = document.getElementById('wp-duration');
-  const targetDurationInput = parseFloat(durationField.value);
-  const placeholderDuration = parseFloat(durationField.placeholder);
-  const totalMin = targetDurationInput || placeholderDuration || (fastMin+slowMin)*4;
-
-  if(timerState.intervalId) clearInterval(timerState.intervalId);
-  closeTimer();
-  document.getElementById('tempo-track').style.display = 'none';
-  document.getElementById('timer-video-wrap').style.display = 'none';
-  timerState = {
-    type:'interval', fastSpeed, slowSpeed,
-    fastDuration: Math.round(fastMin*60), slowDuration: Math.round(slowMin*60),
-    phase:'fast', phaseRemaining: Math.round(fastMin*60),
-    totalElapsed:0, totalTarget: Math.round(totalMin*60),
-    running:true
-  };
-  document.getElementById('timerPanel').style.display = 'block';
-  document.getElementById('timer-ex-name').textContent = '🏃 Walking Pad Interval';
-  document.getElementById('timer-toggle-btn').style.display = '';
-  document.getElementById('timer-toggle-btn').textContent = '⏸ Pause';
-  document.getElementById('timer-skip-btn').style.display = '';
-  playPhaseTone('up');
-  updateTimerDisplay();
-  timerState.intervalId = setInterval(tickTimer, 1000);
-}
-
-function toggleWpStopwatch() {
-  const btn = document.getElementById('wp-timer-btn');
-  if(wpStopwatchInterval) {
-    clearInterval(wpStopwatchInterval);
-    wpStopwatchInterval = null;
-    btn.textContent = '▶ Mulai Jalan';
-    const durInput = document.getElementById('wp-duration');
-    if(durInput) durInput.value = Math.round((wpStopwatchSeconds/60)*2)/2;
-    playDoneChime();
-  } else {
-    btn.textContent = '⏸ Stop';
-    wpStopwatchInterval = setInterval(()=>{
-      wpStopwatchSeconds++;
-      document.getElementById('wp-timer-display').textContent = formatTime(wpStopwatchSeconds);
-    }, 1000);
-  }
-}
-
-function resetWpStopwatch() {
-  clearInterval(wpStopwatchInterval);
-  wpStopwatchInterval = null;
-  wpStopwatchSeconds = 0;
-  const disp = document.getElementById('wp-timer-display');
-  if(disp) disp.textContent = '00:00';
-  const btn = document.getElementById('wp-timer-btn');
-  if(btn) btn.textContent = '▶ Mulai Jalan';
-}
-
-function tempoLabel(ex) {
-  if(ex.alat==='—') return '⏱';
-  if(ex.explosive) return '⚡ Explosive';
-  if(ex.tempo) return ex.tempo.join('-');
-  return '—';
-}
-
-function tempoTitle(ex) {
-  if(ex.alat==='—') return 'Berbasis waktu — pakai timer durasi';
-  if(ex.explosive) return 'Gerakan eksplosif dari pinggul, gak perlu tempo lambat';
-  if(ex.tempo) return `Turun ${ex.tempo[0]}s • Tahan ${ex.tempo[1]}s • Naik ${ex.tempo[2]}s`;
-  return '';
-}
-
-// ===== PERSONALIZATION (fitness level, goal, body data) =====
-const FITNESS_WEIGHT_MULT = { pemula:1, menengah:1.4, mahir:1.8 };
-const FITNESS_PROGRESSION_DAYS = { pemula:14, menengah:10, mahir:7 };
-const FITNESS_SETS_BONUS = { pemula:0, menengah:1, mahir:2 };
-const GOAL_REST_MULT = { fatloss:0.6, recomposition:1, muscle:1.3 };
-const EQUIPMENT_MAX = { DB:12, KB:12, BB:30 };
-
-function getGenderFactor(gender) { return gender==='wanita' ? 0.8 : 1; }
-function getAgeFactor(age) {
-  if(!age) return 1;
-  if(age<30) return 1;
-  if(age<=45) return 0.95;
-  if(age<=60) return 0.85;
-  return 0.75;
-}
-function getBodyWeightFactor(weight) {
-  if(!weight) return 1;
-  return Math.min(1.25, Math.max(0.85, weight/70));
-}
-
-function getAdjustedWeight(ex, day, profile) {
-  if(!ex.defaultWeight) return ex.defaultWeight;
-  const level = profile.fitnessLevel||'pemula';
-  const mult = (FITNESS_WEIGHT_MULT[level]||1) * getGenderFactor(profile.gender) * getAgeFactor(profile.age) * getBodyWeightFactor(profile.currentWeight||profile.startWeight);
-  const ratio = ex.equipmentRatio ? (ex.equipmentRatio[ex.alat]??1) : 1;
-  let weight = ex.defaultWeight * mult * ratio;
-  const progressionDays = FITNESS_PROGRESSION_DAYS[level]||14;
-  const bumps = Math.floor((day-1)/progressionDays);
-  weight += bumps*2.5;
-  weight = Math.round(weight); // plat cuma ada 2kg/3kg — kombinasinya selalu pas di kg bulat
-  const cap = EQUIPMENT_MAX[ex.alat]||30;
-  return Math.min(cap, Math.max(2, weight));
-}
-
-function getAdjustedSets(ex, profile) {
-  if(ex.alat==='—') return ex.sets;
-  const level = profile.fitnessLevel||'pemula';
-  return ex.sets + (FITNESS_SETS_BONUS[level]||0);
-}
-
-function getAdjustedReps(ex, profile) {
-  if(ex.alat==='—') return ex.reps;
-  const match = ex.reps.match(/^(\d+)(.*)$/);
-  if(!match) return ex.reps;
-  let n = parseInt(match[1]);
-  const goal = profile.goal||'recomposition';
-  if(goal==='fatloss') n += 5;
-  else if(goal==='muscle') n = Math.max(6, n-3);
-  return n+match[2];
-}
-
-function getEffectiveExercise(ex, day, profile) {
-  return { ...ex,
-    sets: getAdjustedSets(ex, profile),
-    reps: getAdjustedReps(ex, profile),
-    defaultWeight: getAdjustedWeight(ex, day, profile)
-  };
-}
-
-const FITNESS_WALK_SPEED_BONUS = { pemula:0, menengah:0.5, mahir:1 };
-function getWalkingPadTarget(day, profile) {
-  const level = profile.fitnessLevel||'pemula';
-  const progressionDays = FITNESS_PROGRESSION_DAYS[level]||14;
-  const bumps = Math.floor((day-1)/progressionDays);
-  const heightFactor = Math.min(1.08, Math.max(0.95, (profile.height||170)/170));
-  const ageFactor = getAgeFactor(profile.age);
-  let speed = (5 + (FITNESS_WALK_SPEED_BONUS[level]||0) + bumps*0.5) * heightFactor * ageFactor;
-  speed = Math.min(6.5, Math.max(4, Math.round(speed*2)/2));
-  const duration = Math.min(45, 20 + bumps*5);
-  return { speed, duration };
-}
-
-function renderWorkoutPage() {
-  if(timerState.intervalId) clearInterval(timerState.intervalId);
-  timerState = {};
-  workoutSession = null;
-  clearInterval(wpStopwatchInterval);
-  wpStopwatchInterval = null;
-  wpStopwatchSeconds = 0;
-  const wrap = document.getElementById('workout-content');
-
-  if(isProgramComplete()) {
-    currentWorkoutExercises = [];
-    wrap.innerHTML = `<div class="form-card" style="text-align:center;background:linear-gradient(135deg,rgba(59,130,246,0.12),rgba(139,92,246,0.12))">
-      <h2>🎉 30 Hari Selesai!</h2>
-      <p class="form-subtitle">Program workout kamu udah kelar. Mau lanjut lagi?</p>
-      <button class="btn-primary" onclick="restartCycle()">🔄 Mulai Cycle Baru</button>
-    </div>`;
-    return;
-  }
-
-  const day = getCurrentDay();
-  const workout = getWorkoutForDay(day);
-  const todayKey = todayStr();
-  const logs = getWorkoutLogs();
-  const todayLog = logs[todayKey]||{};
-  const profile = getProfile()||{};
-  const checkins = getCheckins();
-  profile.currentWeight = checkins.length ? (checkins[checkins.length-1].weight||profile.startWeight) : profile.startWeight;
-  const equipmentPrefs = getEquipmentPrefs();
-  currentWorkoutExercises = workout ? workout.exercises.map(ex=>{
-    const options = ex.equipmentOptions||[ex.alat];
-    const pref = equipmentPrefs[ex.name];
-    const chosenAlat = ex.alat==='—' ? ex.alat : (options.includes(pref) ? pref : ex.alat);
-    return getEffectiveExercise({ ...ex, alat:chosenAlat }, day, profile);
-  }) : [];
-
-  let html = '';
-
-  if(workout) {
-    const allDone = currentWorkoutExercises.length>0 && currentWorkoutExercises.every((ex,i)=>todayLog['ex_'+i+'_done']);
-    html += `<div class="workout-section">
-      <h3>${workout.name} <span class="day-badge">Hari ${day} • ${workout.day}</span>
-        <button class="btn-primary" id="start-all-btn" style="margin-left:auto;padding:8px 16px;font-size:13px" onclick="startFullWorkout()" ${allDone?'disabled':''}>${allDone?'✓ Semua Selesai':'▶ Mulai Workout'}</button>
-      </h3>
-      ${workout.warmupTip ? `<div style="font-size:12px;color:var(--muted);margin-bottom:14px;padding:10px 14px;background:var(--surface2);border-radius:10px">💡 <strong>Pemanasan:</strong> ${workout.warmupTip}</div>` : ''}
-      <div class="exercise-table">
+    <!-- HISTORY -->
+    <div class="page" id="page-history">
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Grafik Berat Badan</h3>
+          <select id="chart-metric" onchange="renderChart()" style="padding:6px 12px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:13px;outline:none;">
+            <option value="weight">Berat (kg)</option>
+          </select>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chartCanvas"></canvas>
+        </div>
+      </div>
+      <div class="history-table">
         <table>
-          <thead><tr><th>Exercise</th><th>Alat</th><th>Otot</th><th>Set</th><th>Rep</th><th>Tempo</th><th>Berat (kg)</th><th>Aksi</th></tr></thead>
-          <tbody>`;
-    const exercisePRs = getExercisePRs();
-    currentWorkoutExercises.forEach((ex,i)=>{
-      const exKey = 'ex_'+i;
-      const done = todayLog[exKey+'_done']||false;
-      const wt = todayLog[exKey+'_weight']!==undefined ? todayLog[exKey+'_weight'] : (ex.defaultWeight||'');
-      const alatColor = ex.alat==='BB'?'var(--fire)':ex.alat==='KB'?'var(--accent3)':ex.alat==='DB'?'var(--accent2)':'var(--muted)';
-      const equipOptions = ex.equipmentOptions||[ex.alat];
-      const alatCell = (ex.alat==='—' || equipOptions.length<=1)
-        ? `<span style="font-size:11px;font-weight:700;color:${alatColor};background:rgba(255,255,255,0.06);padding:2px 8px;border-radius:99px">${ex.alat}</span>`
-        : `<select onchange="setExerciseAlat('${ex.name}',this.value,${i})" ${done?'disabled':''} style="font-size:11px;font-weight:700;color:${alatColor};background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:8px;padding:3px 6px;cursor:pointer">
-            ${equipOptions.map(opt=>`<option value="${opt}" ${ex.alat===opt?'selected':''}>${opt} (max ${EQUIPMENT_MAX[opt]}kg)</option>`).join('')}
-          </select>`;
-      const pr = exercisePRs[ex.name];
-      const prBadge = pr ? `<br><span style="font-size:10px;color:var(--fire)" title="Personal record — beban terberat yang pernah dicapai">🏆 PR: ${pr}kg</span>` : '';
-      html += `<tr>
-        <td><strong>${ex.name}</strong>${prBadge}</td>
-        <td>${alatCell}</td>
-        <td style="color:var(--muted)">${ex.muscle}</td>
-        <td>${ex.sets}</td>
-        <td>${ex.reps}</td>
-        <td><span class="tempo-badge" title="${tempoTitle(ex)}">${tempoLabel(ex)}</span></td>
-        <td><input class="weight-input" type="number" step="1" min="2" value="${wt}" placeholder="0" onchange="saveExWeight('${todayKey}','${exKey}',this.value)"></td>
-        <td><div style="display:flex;gap:6px;align-items:center">
-          <button class="start-btn" id="start-${i}" onclick="startSingleExercise(${i})" ${done?'disabled':''}>${done?'✓':'▶'}</button>
-          <button class="done-toggle ${done?'on':''}" id="dt-${i}" onclick="toggleExDone('${todayKey}','${exKey}',${i})"></button>
-        </div></td>
-      </tr>`;
+          <thead>
+            <tr>
+              <th>Hari</th><th>Tanggal</th><th>Berat</th><th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="history-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /container -->
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+  // ===== DATA =====
+  const WORKOUT_PLAN = {
+    1: { name:'Upper Push', day:'Senin', warmupTip:'Arm circles 30s, jumping jack ringan 30s, shoulder rotation 30s, push-up plank hold 30s — ulang 2x', exercises:[
+      {name:'Pemanasan Dinamis',sets:1,reps:'5 menit',muscle:'Warm-up',alat:'—',defaultWeight:0,videoId:'LKSC_KujZ4g'},
+      {name:'DB Floor Press',sets:3,reps:'12',muscle:'Dada',alat:'DB',defaultWeight:5,tempo:[2,1,2],equipmentOptions:['DB','BB'],equipmentRatio:{DB:1,BB:2}},
+      {name:'DB Shoulder Press',sets:3,reps:'12',muscle:'Bahu',alat:'DB',defaultWeight:4,tempo:[2,1,2],equipmentOptions:['DB','BB'],equipmentRatio:{DB:1,BB:2}},
+      {name:'DB Lateral Raise',sets:3,reps:'15',muscle:'Bahu',alat:'DB',defaultWeight:3,tempo:[2,0,2],equipmentOptions:['DB'],equipmentRatio:{DB:1}},
+      {name:'KB Overhead Press',sets:3,reps:'10',muscle:'Bahu',alat:'KB',defaultWeight:4,tempo:[2,1,2],equipmentOptions:['KB','DB'],equipmentRatio:{KB:1,DB:1}},
+      {name:'Tricep Kickback',sets:3,reps:'12',muscle:'Tricep',alat:'DB',defaultWeight:3,tempo:[1,1,2],equipmentOptions:['DB'],equipmentRatio:{DB:1}},
+    ]},
+    2: { name:'Lower Body', day:'Rabu', warmupTip:'Bodyweight squat 30s, leg swing 30s/kaki, hip circle 30s, walking lunge tanpa beban 30s — ulang 2x', exercises:[
+      {name:'Pemanasan Dinamis',sets:1,reps:'5 menit',muscle:'Warm-up',alat:'—',defaultWeight:0,videoId:'LKSC_KujZ4g'},
+      {name:'Goblet Squat',sets:3,reps:'15',muscle:'Paha',alat:'KB',defaultWeight:8,tempo:[3,1,1],equipmentOptions:['KB','DB'],equipmentRatio:{KB:1,DB:1}},
+      {name:'Barbell Romanian Deadlift',sets:3,reps:'12',muscle:'Hamstring',alat:'BB',defaultWeight:8,tempo:[3,1,1],equipmentOptions:['BB','DB','KB'],equipmentRatio:{BB:1,DB:1,KB:1}},
+      {name:'DB Lunges',sets:3,reps:'10/kaki',muscle:'Paha',alat:'DB',defaultWeight:5,tempo:[2,1,2],equipmentOptions:['DB','KB'],equipmentRatio:{DB:1,KB:1}},
+      {name:'KB Swing',sets:3,reps:'15',muscle:'Full Body',alat:'KB',defaultWeight:8,explosive:true,equipmentOptions:['KB','DB'],equipmentRatio:{KB:1,DB:1}},
+      {name:'Calf Raise + DB',sets:3,reps:'20',muscle:'Betis',alat:'DB',defaultWeight:5,tempo:[2,2,2],equipmentOptions:['DB','KB','BB'],equipmentRatio:{DB:1,KB:1,BB:1}},
+    ]},
+    3: { name:'Upper Pull', day:'Jumat', warmupTip:'Arm circles 30s, cat-cow stretch 30s, torso twist 30s, gerakan tarik tanpa beban 30s — ulang 2x', exercises:[
+      {name:'Pemanasan Dinamis',sets:1,reps:'5 menit',muscle:'Warm-up',alat:'—',defaultWeight:0,videoId:'LKSC_KujZ4g'},
+      {name:'Barbell Row',sets:3,reps:'12',muscle:'Punggung',alat:'BB',defaultWeight:8,tempo:[2,1,2],equipmentOptions:['BB','DB'],equipmentRatio:{BB:1,DB:0.5}},
+      {name:'DB Reverse Fly',sets:3,reps:'12',muscle:'Punggung',alat:'DB',defaultWeight:3,tempo:[2,1,2],equipmentOptions:['DB'],equipmentRatio:{DB:1}},
+      {name:'Barbell Curl',sets:3,reps:'12',muscle:'Bicep',alat:'BB',defaultWeight:5,tempo:[2,1,2],equipmentOptions:['BB','DB'],equipmentRatio:{BB:1,DB:0.5}},
+      {name:'Barbell Deadlift',sets:3,reps:'12',muscle:'Punggung',alat:'BB',defaultWeight:8,tempo:[3,1,1],equipmentOptions:['BB','DB','KB'],equipmentRatio:{BB:1,DB:1,KB:1}},
+      {name:'Barbell Shrug',sets:3,reps:'15',muscle:'Trapezius',alat:'BB',defaultWeight:8,tempo:[1,2,1],equipmentOptions:['BB','DB'],equipmentRatio:{BB:1,DB:0.5}},
+    ]},
+    4: { name:'Cardio', day:'Sabtu', exercises:[
+      {name:'Walking Pad Warm Up',sets:1,reps:'5 menit',muscle:'Cardio',alat:'—',defaultWeight:0},
+      {name:'Walking Pad Main',sets:1,reps:'25-35 menit',muscle:'Cardio',alat:'—',defaultWeight:0},
+      {name:'KB Swing',sets:3,reps:'20',muscle:'Full Body',alat:'KB',defaultWeight:8,explosive:true,equipmentOptions:['KB','DB'],equipmentRatio:{KB:1,DB:1}},
+      {name:'Plank',sets:3,reps:'30 detik',muscle:'Core',alat:'—',defaultWeight:0},
+    ]},
+  };
+
+  // Map week/cycle to workout type
+  function getWorkoutForDay(dayNum) {
+    if(dayNum < 1) return null;
+    const cycle = [1,null,2,null,3,4,null]; // Mon,Tue,Wed,Thu,Fri,Sat,Sun
+    const idx = (dayNum-1) % 7;
+    return cycle[idx] ? WORKOUT_PLAN[cycle[idx]] : null;
+  }
+
+  // Scans all logged workout days and finds the heaviest weight ever recorded per exercise name
+  function getExercisePRs() {
+    const profile = getProfile();
+    if(!profile) return {};
+    const logs = getWorkoutLogs();
+    const prs = {};
+    Object.keys(logs).forEach(dateKey=>{
+      const dayNum = Math.floor((new Date(dateKey)-new Date(profile.startDate))/(1000*60*60*24))+1;
+      const workout = getWorkoutForDay(dayNum);
+      if(!workout) return;
+      const log = logs[dateKey];
+      workout.exercises.forEach((ex,i)=>{
+        const w = parseFloat(log['ex_'+i+'_weight']);
+        if(!isNaN(w) && w>0 && (!prs[ex.name] || w>prs[ex.name])) prs[ex.name] = w;
+      });
     });
-    html += `</tbody></table></div>
-      <div class="timer-panel" id="timerPanel" style="display:none">
-        <div class="timer-panel-header">
-          <h3 id="timer-ex-name">—</h3>
-          <div style="display:flex;gap:8px">
-            <button class="btn-secondary" id="sound-toggle-btn" onclick="toggleSound()">${isSoundOn()?'🔊':'🔇'}</button>
-            <button class="btn-secondary" onclick="closeTimer()">✕ Tutup</button>
-          </div>
-        </div>
-        <div id="timer-video-wrap" style="display:none;margin-bottom:16px">
-          <div style="position:relative;width:100%;padding-bottom:56.25%;border-radius:12px;overflow:hidden">
-            <iframe id="timer-video" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" src="" title="Video pemanasan" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-          </div>
-        </div>
-        <div class="timer-phase down" id="timer-phase">Durasi</div>
-        <div class="tempo-track" id="tempo-track" style="display:none">
-          <div class="tempo-dot" id="tempo-dot"></div>
-        </div>
-        <div class="timer-display" id="timer-display">00:00</div>
-        <div class="timer-meta" id="timer-meta"></div>
-        <div class="timer-controls">
-          <button class="btn-primary" id="timer-toggle-btn" onclick="toggleTimer()">▶ Mulai</button>
-          <button class="btn-secondary" onclick="resetTimer()">↺ Reset</button>
-          <button class="btn-secondary" id="timer-skip-btn" onclick="skipOrFinish()">⏭ Lanjut</button>
-        </div>
-      </div>
-    </div>`;
-
-    // Walking pad cardio
-    const wpTarget = getWalkingPadTarget(day, profile);
-    html += `<div class="form-card" style="margin-top:0">
-      <h2>🏃 Walking Pad</h2>
-      <div class="form-subtitle">Catat cardio kamu hari ini — speed disesuaikan fitness level, tinggi & umur kamu</div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Kecepatan (km/h)</label>
-          <input type="number" id="wp-speed" step="0.5" placeholder="${wpTarget.speed}" value="${todayLog.wpSpeed||''}">
-        </div>
-        <div class="form-group">
-          <label>Durasi (menit)</label>
-          <input type="number" id="wp-duration" placeholder="${wpTarget.duration}" value="${todayLog.wpDuration||''}">
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px;background:var(--surface2);border-radius:10px;flex-wrap:wrap">
-        <span style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;min-width:64px" id="wp-timer-display">00:00</span>
-        <button class="btn-secondary" id="wp-timer-btn" onclick="toggleWpStopwatch()">▶ Mulai Jalan</button>
-        <button class="btn-secondary" onclick="resetWpStopwatch()">↺ Reset</button>
-        <span style="font-size:11px;color:var(--muted);margin-left:auto">Stop = auto-isi durasi</span>
-      </div>
-      <button class="btn-secondary" onclick="saveCardio('${todayKey}')" style="margin-top:8px">Simpan Cardio</button>
-      <div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:10px">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">🔁 Mode Interval (opsional) — gantian cepat/santai otomatis, lebih efektif buat visceral fat</div>
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Speed Cepat (km/h)</label>
-            <input type="number" id="wp-fast-speed" step="0.5" value="${wpTarget.speed}">
-          </div>
-          <div class="form-group">
-            <label>Speed Santai (km/h)</label>
-            <input type="number" id="wp-slow-speed" step="0.5" value="${Math.max(4,wpTarget.speed-1.5)}">
-          </div>
-          <div class="form-group">
-            <label>Durasi Cepat (menit)</label>
-            <input type="number" id="wp-fast-min" step="0.5" value="2">
-          </div>
-          <div class="form-group">
-            <label>Durasi Santai (menit)</label>
-            <input type="number" id="wp-slow-min" step="0.5" value="1">
-          </div>
-        </div>
-        <button class="btn-primary" onclick="startWalkingInterval()" style="margin-top:8px;width:100%">▶ Mulai Interval Walking</button>
-      </div>
-    </div>`;
-  } else {
-    // Rest day
-    html += `<div class="form-card">
-      <h2>😴 Rest Day</h2>
-      <div class="form-subtitle">Hari ini jadwalnya istirahat. Tubuh kamu recover dan tumbuh saat rest!</div>
-      <p style="color:var(--muted);font-size:14px;line-height:1.8">
-        ✅ Tetap minum air putih 2.5-3L<br>
-        ✅ Makan sesuai plan<br>
-        ✅ Tidur cukup 7-8 jam<br>
-        ✅ Jalan kaki santai boleh
-      </p>
-    </div>`;
-
-    // Still show walking pad option
-    html += `<div class="form-card">
-      <h2>🚶 Walking Santai (Opsional)</h2>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Kecepatan (km/h)</label>
-          <input type="number" id="wp-speed" step="0.5" placeholder="4-5" value="${todayLog.wpSpeed||''}">
-        </div>
-        <div class="form-group">
-          <label>Durasi (menit)</label>
-          <input type="number" id="wp-duration" placeholder="20" value="${todayLog.wpDuration||''}">
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px;background:var(--surface2);border-radius:10px;flex-wrap:wrap">
-        <span style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;min-width:64px" id="wp-timer-display">00:00</span>
-        <button class="btn-secondary" id="wp-timer-btn" onclick="toggleWpStopwatch()">▶ Mulai Jalan</button>
-        <button class="btn-secondary" onclick="resetWpStopwatch()">↺ Reset</button>
-        <span style="font-size:11px;color:var(--muted);margin-left:auto">Stop = auto-isi durasi</span>
-      </div>
-      <button class="btn-secondary" onclick="saveCardio('${todayKey}')" style="margin-top:8px">Simpan</button>
-      <div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:10px">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">🔁 Mode Interval (opsional)</div>
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Speed Cepat (km/h)</label>
-            <input type="number" id="wp-fast-speed" step="0.5" value="5">
-          </div>
-          <div class="form-group">
-            <label>Speed Santai (km/h)</label>
-            <input type="number" id="wp-slow-speed" step="0.5" value="4">
-          </div>
-          <div class="form-group">
-            <label>Durasi Cepat (menit)</label>
-            <input type="number" id="wp-fast-min" step="0.5" value="2">
-          </div>
-          <div class="form-group">
-            <label>Durasi Santai (menit)</label>
-            <input type="number" id="wp-slow-min" step="0.5" value="1">
-          </div>
-        </div>
-        <button class="btn-primary" onclick="startWalkingInterval()" style="margin-top:8px;width:100%">▶ Mulai Interval Walking</button>
-      </div>
-    </div>`;
+    return prs;
   }
 
-  wrap.innerHTML = html;
-}
+  // ===== STORAGE =====
+  function load(key,def) { try{ return JSON.parse(localStorage.getItem(key))??def; }catch(e){ return def; } }
+  function save(key,val) { localStorage.setItem(key,JSON.stringify(val)); }
 
-function saveExWeight(dayKey, exKey, val) {
-  const logs = getWorkoutLogs();
-  if(!logs[dayKey]) logs[dayKey]={};
-  logs[dayKey][exKey+'_weight'] = val;
-  saveWorkoutLog(dayKey, logs[dayKey]);
-}
+  function getProfile() { return load('shred_profile',null); }
+  function saveProfile(p) { save('shred_profile',p); }
+  function getCheckins() { return load('shred_checkins',[]); }
+  function saveCheckins(arr) { save('shred_checkins',arr); }
+  function getTodayChecks() { return load('shred_today_'+todayStr(),{}); }
+  function saveTodayChecks(obj) { save('shred_today_'+todayStr(),obj); }
+  function getWorkoutLogs() { return load('shred_workouts',{}); }
+  function saveWorkoutLog(dayKey,data) { const w=getWorkoutLogs(); w[dayKey]=data; save('shred_workouts',w); }
+  function getEquipmentPrefs() { return load('shred_equipment_prefs',{}); }
+  function saveEquipmentPrefs(prefs) { save('shred_equipment_prefs',prefs); }
 
-function toggleExDone(dayKey, exKey, idx) {
-  const logs = getWorkoutLogs();
-  if(!logs[dayKey]) logs[dayKey]={};
-  const nowDone = !logs[dayKey][exKey+'_done'];
-  logs[dayKey][exKey+'_done'] = nowDone;
-  saveWorkoutLog(dayKey, logs[dayKey]);
-  const btn = document.getElementById('dt-'+idx);
-  btn.classList.toggle('on');
-  const startBtn = document.getElementById('start-'+idx);
-  if(startBtn) { startBtn.disabled = nowDone; startBtn.textContent = nowDone?'✓':'▶'; }
-  refreshStartAllButtonState();
-  updateDashboard();
-}
-
-function refreshStartAllButtonState() {
-  const btn = document.getElementById('start-all-btn');
-  if(!btn || !currentWorkoutExercises.length) return;
-  const todayKey = todayStr();
-  const logs = getWorkoutLogs();
-  const todayLog = logs[todayKey]||{};
-  const allDone = currentWorkoutExercises.every((ex,i)=>todayLog['ex_'+i+'_done']);
-  btn.disabled = allDone;
-  btn.textContent = allDone ? '✓ Semua Selesai' : '▶ Mulai Workout';
-}
-
-function setExerciseAlat(name, alat, i) {
-  const prefs = getEquipmentPrefs();
-  prefs[name] = alat;
-  saveEquipmentPrefs(prefs);
-  const todayKey = todayStr();
-  const logs = getWorkoutLogs();
-  if(logs[todayKey] && logs[todayKey]['ex_'+i+'_weight']!==undefined) {
-    delete logs[todayKey]['ex_'+i+'_weight'];
-    saveWorkoutLog(todayKey, logs[todayKey]);
+  function resetAllData() {
+    if(!confirm('Yakin mau reset semua data? Profil, check-in, dan progress workout akan terhapus dan gak bisa dibalikin.')) return;
+    Object.keys(localStorage).filter(k=>k.startsWith('shred_')).forEach(k=>localStorage.removeItem(k));
+    location.reload();
   }
-  renderWorkoutPage();
-}
 
-// ===== TIMER SOUND =====
-let audioCtx = null;
-function isSoundOn() { return load('shred_sound_on', true); }
-function toggleSound() {
-  save('shred_sound_on', !isSoundOn());
-  const btn = document.getElementById('sound-toggle-btn');
-  if(btn) btn.textContent = isSoundOn()?'🔊':'🔇';
-}
-function getAudioCtx() {
-  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-  if(audioCtx.state==='suspended') audioCtx.resume();
-  return audioCtx;
-}
-function playBeep(freq, duration=150, type='sine', volume=0.2) {
-  if(!isSoundOn()) return;
-  try {
-    const ctx = getAudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = type;
-    osc.frequency.value = freq;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    gain.gain.setValueAtTime(volume, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration/1000);
-    osc.start();
-    osc.stop(ctx.currentTime + duration/1000);
-  } catch(e) {}
-}
-function playPhaseTone(phase) {
-  const freqs = { down:329.6, hold:440, up:587.3 };
-  playBeep(freqs[phase], 220, 'sine', 0.25);
-}
-function playTick() { playBeep(220, 60, 'square', 0.08); }
-function playDoneChime() {
-  playBeep(659.3, 150, 'sine', 0.25);
-  setTimeout(()=>playBeep(880, 250, 'sine', 0.25), 160);
-}
-
-// ===== EXERCISE TIMER =====
-function parseDurationSeconds(reps) {
-  const nums = (reps.match(/\d+(\.\d+)?/g)||[]).map(Number);
-  if(!nums.length) return 60;
-  const avg = nums.reduce((a,b)=>a+b,0)/nums.length;
-  return Math.round(reps.includes('menit') ? avg*60 : avg);
-}
-
-function formatTime(s) {
-  const m = Math.floor(s/60).toString().padStart(2,'0');
-  const sec = Math.floor(s%60).toString().padStart(2,'0');
-  return `${m}:${sec}`;
-}
-
-function startSingleExercise(i) {
-  const ex = currentWorkoutExercises[i];
-  if(!ex) return;
-  const todayKey = todayStr();
-  const logs = getWorkoutLogs();
-  if(logs[todayKey] && logs[todayKey]['ex_'+i+'_done']) return; // already completed, blocked
-  const profile = getProfile()||{};
-  const blocks = buildSessionBlocks([{ ex, realIndex:i }], profile);
-  if(!blocks.length) return;
-  workoutSession = { blocks, idx:0 };
-  document.getElementById('timerPanel').style.display = 'block';
-  document.getElementById('timer-toggle-btn').style.display = '';
-  document.getElementById('timer-skip-btn').style.display = '';
-  runSessionBlock(0);
-}
-
-// Configures timerState for a single work block (standalone or inside a session)
-function setupWorkBlock(ex, setInfo) {
-  const setLabel = setInfo ? `Set ${setInfo.setNum}/${setInfo.totalSets} — ` : '';
-  document.getElementById('tempo-track').style.display = ex.tempo ? 'block' : 'none';
-  const videoWrap = document.getElementById('timer-video-wrap');
-  if(ex.videoId) {
-    document.getElementById('timer-video').src = `https://www.youtube.com/embed/${ex.videoId}`;
-    videoWrap.style.display = 'block';
-  } else {
-    document.getElementById('timer-video').src = '';
-    videoWrap.style.display = 'none';
+  function todayStr() {
+    return new Date().toISOString().slice(0,10);
   }
-  if(ex.alat === '—') {
-    timerState.type = 'duration';
-    timerState.totalSeconds = parseDurationSeconds(ex.reps);
-    timerState.remaining = timerState.totalSeconds;
-    document.getElementById('timer-meta').innerHTML =
-      `${setLabel}Target: <input type="number" id="timer-duration-input" value="${Math.round(timerState.totalSeconds/60)}" min="1" style="width:56px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-family:'Space Grotesk',sans-serif;text-align:center" onchange="applyDurationInput()"> menit`;
-  } else if(ex.explosive) {
-    timerState.type = 'explosive';
-    timerState.totalSeconds = 0;
-    document.getElementById('timer-meta').textContent =
-      `${setLabel}${ex.reps} reps — gerakan cepat & kuat dari pinggul. Klik "⏭ Lanjut" kalau set sudah selesai.`;
-  } else if(ex.tempo) {
-    timerState.type = 'tempo';
-    timerState.tempo = ex.tempo;
-    timerState.repCount = 0;
-    timerState.targetReps = parseInt(ex.reps)||0;
-    timerState.setLabel = setLabel;
-    resetTempoDot();
-    setupTempoPhase('down');
+
+  // ===== SETUP =====
+  function setupProfile() {
+    const name = document.getElementById('setupName').value.trim() || 'Bro';
+    const weight = parseFloat(document.getElementById('setupWeight').value);
+    const height = parseFloat(document.getElementById('setupHeight').value);
+    const age = parseInt(document.getElementById('setupAge').value);
+    const gender = document.getElementById('setupGender').value;
+    const fitnessLevel = document.getElementById('setupFitnessLevel').value;
+    const goal = document.getElementById('setupGoal').value;
+    if(!weight||!height||!age) { alert('Isi semua field ya!'); return; }
+    if(weight<20||weight>300) { alert('Berat badan gak valid (20-300 kg)'); return; }
+    if(height<100||height>250) { alert('Tinggi gak valid (100-250 cm)'); return; }
+    if(age<10||age>100) { alert('Umur gak valid (10-100 tahun)'); return; }
+    const existing = getProfile();
+    const profile = { name, startDate: existing?existing.startDate:todayStr(), startWeight:weight, height, age, gender, fitnessLevel, goal };
+    saveProfile(profile);
+    document.getElementById('setupModal').style.display='none';
+    initApp();
   }
-}
 
-function applyDurationInput() {
-  const val = parseFloat(document.getElementById('timer-duration-input').value)||1;
-  timerState.totalSeconds = Math.round(val*60);
-  timerState.remaining = timerState.totalSeconds;
-  updateTimerDisplay();
-}
-
-function setupTempoPhase(phase) {
-  timerState.phase = phase;
-  const idx = phase==='down'?0:phase==='hold'?1:2;
-  const dur = timerState.tempo[idx];
-  if(phase==='hold' && !dur) { advanceTempoPhase(); return; }
-  timerState.phaseRemaining = dur;
-  playPhaseTone(phase);
-  animateTempoDot(phase, dur);
-}
-
-function animateTempoDot(phase, durationSec) {
-  const dot = document.getElementById('tempo-dot');
-  if(!dot) return;
-  dot.classList.remove('hold');
-  if(phase==='down') {
-    dot.style.transition = `top ${durationSec}s linear`;
-    requestAnimationFrame(()=>{ dot.style.top = 'calc(100% - 56px)'; });
-  } else if(phase==='up') {
-    dot.style.transition = `top ${durationSec}s linear`;
-    requestAnimationFrame(()=>{ dot.style.top = '8px'; });
-  } else if(phase==='hold') {
-    dot.style.transition = 'none';
-    dot.classList.add('hold');
+  function openEditProfile() {
+    const profile = getProfile();
+    if(!profile) return;
+    document.getElementById('setupName').value = profile.name||'';
+    document.getElementById('setupWeight').value = profile.startWeight||'';
+    document.getElementById('setupHeight').value = profile.height||'';
+    document.getElementById('setupAge').value = profile.age||'';
+    document.getElementById('setupGender').value = profile.gender||'pria';
+    document.getElementById('setupFitnessLevel').value = profile.fitnessLevel||'pemula';
+    document.getElementById('setupGoal').value = profile.goal||'recomposition';
+    document.getElementById('setupModalTitle').textContent = 'Edit Profil ✏️';
+    document.getElementById('setupModalSubtitle').textContent = 'Update data kamu. Tanggal mulai program gak akan berubah.';
+    document.getElementById('setupModalBtn').textContent = 'Simpan Perubahan ✓';
+    document.getElementById('setupModal').style.display = 'flex';
   }
-}
 
-function resetTempoDot() {
-  const dot = document.getElementById('tempo-dot');
-  if(!dot) return;
-  dot.classList.remove('hold');
-  dot.style.transition = 'none';
-  dot.style.top = '8px';
-}
-
-function advanceTempoPhase() {
-  if(timerState.phase==='down') { setupTempoPhase('hold'); return; }
-  if(timerState.phase==='hold') { setupTempoPhase('up'); return; }
-  timerState.repCount++;
-  if(timerState.targetReps && timerState.repCount>=timerState.targetReps) {
-    clearInterval(timerState.intervalId);
-    timerState.running = false;
-    document.getElementById('timer-toggle-btn').textContent = '▶ Mulai';
-    playDoneChime();
-    if(timerState.session) setTimeout(advanceSession, 500);
-    else showToast('Set selesai! ✅');
-    return;
+  // ===== INIT =====
+  function initApp() {
+    const profile = getProfile();
+    if(!profile) { document.getElementById('setupModal').style.display='flex'; return; }
+    document.getElementById('setupModal').style.display='none';
+    loadTodayChecks();
+    updateDashboard();
+    renderWorkoutPage();
   }
-  setupTempoPhase('down');
-}
 
-function toggleTimer() {
-  if(!timerState.type) return;
-  if(timerState.running) {
-    timerState.running = false;
-    clearInterval(timerState.intervalId);
-    document.getElementById('timer-toggle-btn').textContent = '▶ Lanjut';
-  } else {
-    timerState.running = true;
+  // ===== DAY CALC =====
+  function getCurrentDay() {
+    const profile = getProfile();
+    if(!profile) return 0;
+    const start = new Date(profile.startDate);
+    const now = new Date();
+    const diff = Math.floor((now-start)/(1000*60*60*24))+1;
+    return Math.min(diff,30);
+  }
+
+  function isProgramComplete() {
+    const profile = getProfile();
+    if(!profile) return false;
+    const start = new Date(profile.startDate);
+    const now = new Date();
+    const diff = Math.floor((now-start)/(1000*60*60*24))+1;
+    return diff > 30;
+  }
+
+  function restartCycle() {
+    if(!confirm('Mulai cycle 30 hari baru? History & check-in lama tetap tersimpan, cuma hari dihitung ulang dari hari ini.')) return;
+    const profile = getProfile();
+    profile.startDate = todayStr();
+    saveProfile(profile);
+    initApp();
+  }
+
+  // ===== DASHBOARD =====
+  function calcBMI(weightKg, heightCm) {
+    if(!weightKg || !heightCm) return null;
+    const h = heightCm/100;
+    return weightKg/(h*h);
+  }
+
+  function bmiCategory(bmi) {
+    if(bmi<18.5) return { label:'Kurus', color:'var(--accent2)' };
+    if(bmi<23) return { label:'Normal', color:'var(--green)' };
+    if(bmi<25) return { label:'Berisiko', color:'var(--fire)' };
+    if(bmi<30) return { label:'Obesitas I', color:'var(--red)' };
+    return { label:'Obesitas II', color:'var(--red)' };
+  }
+
+  // ===== DYNAMIC MEAL PLAN (editable, gram-level) =====
+  const FOOD_CATALOG = {
+    nasi:        { label:'Nasi Putih',          unit:'g',       kkalPerUnit:1.3,  proteinPerUnit:0.027, sodiumPerUnit:0,     step:25,  min:25,  max:500, defaultQty:150 },
+    indomie:     { label:'Indomie Goreng',      unit:'bungkus', kkalPerUnit:380,  proteinPerUnit:8,     sodiumPerUnit:1070,  step:0.5, min:0.5, max:3,   defaultQty:1 },
+    ayumie:      { label:'Ayumie Rasa Ayam',    unit:'bungkus', kkalPerUnit:290,  proteinPerUnit:8,     sodiumPerUnit:650,   step:0.5, min:0.5, max:3,   defaultQty:1 },
+    ayumieSpicy: { label:'Ayumie Korean Spicy', unit:'bungkus', kkalPerUnit:310,  proteinPerUnit:7,     sodiumPerUnit:900,   step:0.5, min:0.5, max:3,   defaultQty:1 },
+    tahu:        { label:'Tahu',                unit:'g',       kkalPerUnit:0.75, proteinPerUnit:0.08,  sodiumPerUnit:0.5,   step:25,  min:25,  max:500, defaultQty:100 },
+    tempe:       { label:'Tempe',                unit:'g',       kkalPerUnit:1.9,  proteinPerUnit:0.17,  sodiumPerUnit:0.05,  step:25,  min:25,  max:500, defaultQty:100 },
+    dadaAyam:    { label:'Dada Ayam Boneless',  unit:'g',       kkalPerUnit:1.65, proteinPerUnit:0.31,  sodiumPerUnit:0.74,  step:25,  min:25,  max:500, defaultQty:100 },
+    telur:       { label:'Telur',               unit:'butir',   kkalPerUnit:70,   proteinPerUnit:6,     sodiumPerUnit:70,    step:1,   min:1,   max:10,  defaultQty:2 },
+    whey:        { label:'Whey Protein',        unit:'scoop',   kkalPerUnit:120,  proteinPerUnit:25,    sodiumPerUnit:50,    step:0.5, min:0.5, max:4,   defaultQty:1 },
+  };
+  const SODIUM_BUDGET = 2000; // mg/hari
+  const MEAL_LABELS = { sarapan:'🌅 Sarapan', siang:'☀️ Siang', malam:'🌙 Malam' };
+  const PROTEIN_PER_KG = { fatloss:2.2, recomposition:2.0, muscle:2.1 };
+  const CALORIE_DEFICIT = { fatloss:500, recomposition:400, muscle:150 };
+
+  function calcNutritionTargets(profile) {
+    const weight = profile.currentWeight||profile.startWeight||70;
+    const height = profile.height||170;
+    const age = profile.age||28;
+    const gender = profile.gender||'pria';
+    const bmr = gender==='wanita'
+      ? 10*weight + 6.25*height - 5*age - 161
+      : 10*weight + 6.25*height - 5*age + 5;
+    const tdee = bmr*1.2;
+    const goal = profile.goal||'recomposition';
+    const calorieFloor = gender==='wanita' ? 1200 : 1500;
+    const targetCalories = Math.max(calorieFloor, Math.round(tdee - (CALORIE_DEFICIT[goal]||400)));
+    const targetProtein = Math.round(weight * (PROTEIN_PER_KG[goal]||2.0));
+    return { bmr:Math.round(bmr), tdee:Math.round(tdee), targetCalories, targetProtein };
+  }
+
+  function calcMealMacros(items) {
+    let kkal=0, protein=0, sodium=0;
+    items.forEach(({food,qty})=>{
+      const cat = FOOD_CATALOG[food];
+      if(!cat) return;
+      kkal += cat.kkalPerUnit*qty;
+      protein += cat.proteinPerUnit*qty;
+      sodium += (cat.sodiumPerUnit||0)*qty;
+    });
+    return { kkal:Math.round(kkal), protein:Math.round(protein), sodium:Math.round(sodium) };
+  }
+
+  function calcPlanMacros(plan) {
+    let kkal=0, protein=0, sodium=0;
+    ['sarapan','siang','malam'].forEach(k=>{
+      const m = calcMealMacros(plan[k]||[]);
+      kkal += m.kkal; protein += m.protein; sodium += m.sodium;
+    });
+    return { kkal, protein, sodium };
+  }
+
+  function getMealPlan() { return load('shred_meal_plan', null); }
+  function saveMealPlanData(plan) { save('shred_meal_plan', plan); }
+
+  function generateDefaultMealPlan(profile) {
+    const targets = calcNutritionTargets(profile);
+    const plan = {
+      sarapan: [],
+      siang: [ { food:'indomie', qty:1 }, { food:'telur', qty:3 }, { food:'tempe', qty:150 }, { food:'tahu', qty:150 } ],
+      malam: [ { food:'telur', qty:3 }, { food:'tempe', qty:100 }, { food:'tahu', qty:100 } ],
+    };
+    const indomieItem = plan.siang.find(it=>it.food==='indomie');
+    const otherItems = [...plan.siang.filter(it=>it.food!=='indomie'), ...plan.malam];
+    const baselineProtein = calcMealMacros(otherItems).protein;
+    const ratio = targets.targetProtein / baselineProtein;
+    otherItems.forEach(item=>{
+      const cat = FOOD_CATALOG[item.food];
+      const q = Math.round(item.qty*ratio/cat.step)*cat.step;
+      item.qty = Math.max(cat.min, Math.min(cat.max, q));
+    });
+    const proteinCalories = calcMealMacros(otherItems).kkal;
+    const carbNeed = targets.targetCalories - proteinCalories;
+    indomieItem.qty = Math.min(2.5, Math.max(0.5, Math.round((carbNeed/FOOD_CATALOG.indomie.kkalPerUnit)*2)/2));
+    return plan;
+  }
+
+  function getOrInitMealPlan(profile) {
+    let plan = getMealPlan();
+    if(!plan) {
+      plan = generateDefaultMealPlan(profile);
+      saveMealPlanData(plan);
+    }
+    return plan;
+  }
+
+  function updateMealItemQty(mealKey, idx, value) {
+    const plan = getMealPlan();
+    const cat = FOOD_CATALOG[plan[mealKey][idx].food];
+    let q = parseFloat(value)||cat.min;
+    q = Math.max(cat.min, Math.min(cat.max, q));
+    plan[mealKey][idx].qty = q;
+    saveMealPlanData(plan);
+    updateDashboard();
+  }
+
+  function removeMealItem(mealKey, idx) {
+    const plan = getMealPlan();
+    plan[mealKey].splice(idx,1);
+    saveMealPlanData(plan);
+    updateDashboard();
+  }
+
+  function addMealItem(mealKey) {
+    const select = document.getElementById('add-food-'+mealKey);
+    const food = select.value;
+    if(!food) return;
+    const plan = getMealPlan();
+    plan[mealKey].push({ food, qty: FOOD_CATALOG[food].defaultQty });
+    saveMealPlanData(plan);
+    updateDashboard();
+  }
+
+  function renderMealPlanSection(profile) {
+    const plan = getOrInitMealPlan(profile);
+    const targets = calcNutritionTargets(profile);
+    const checks = getTodayChecks();
+    let html = '';
+    ['sarapan','siang','malam'].forEach(mealKey=>{
+      const items = plan[mealKey]||[];
+      const macros = calcMealMacros(items);
+      const checked = checks[mealKey];
+      html += `<div class="meal-block">
+        <div class="meal-block-header" onclick="toggleCheck('${mealKey}')">
+          <div class="check-box ${checked?'checked':''}" id="c-${mealKey}"></div>
+          <strong class="check-label ${checked?'done':''}" style="font-size:13px">${MEAL_LABELS[mealKey]}</strong>
+          ${items.length ? `<span style="font-size:11px;color:var(--muted)">${macros.kkal} kkal • ${macros.protein}g protein • ${macros.sodium}mg natrium</span>` : `<span style="font-size:11px;color:var(--muted)">(kosong)</span>`}
+        </div>`;
+      items.forEach((item,idx)=>{
+        const cat = FOOD_CATALOG[item.food];
+        if(!cat) return;
+        html += `<div class="meal-item-row">
+          <span class="meal-item-name">${cat.label}</span>
+          <input class="meal-item-qty" type="number" step="${cat.step}" min="${cat.min}" max="${cat.max}" value="${item.qty}" onchange="updateMealItemQty('${mealKey}',${idx},this.value)">
+          <span class="meal-item-unit">${cat.unit}</span>
+          <button class="meal-item-remove" onclick="removeMealItem('${mealKey}',${idx})">✕</button>
+        </div>`;
+      });
+      html += `<div class="meal-add-row">
+          <select class="meal-add-select" id="add-food-${mealKey}">
+            <option value="">+ Tambah makanan...</option>
+            ${Object.keys(FOOD_CATALOG).map(key=>`<option value="${key}">${FOOD_CATALOG[key].label}</option>`).join('')}
+          </select>
+          <button class="btn-secondary" style="padding:6px 12px;font-size:12px" onclick="addMealItem('${mealKey}')">+</button>
+        </div>
+      </div>`;
+    });
+    const total = calcPlanMacros(plan);
+    const sodiumPct = Math.round(total.sodium/SODIUM_BUDGET*100);
+    const sodiumColor = sodiumPct>100 ? 'var(--red)' : sodiumPct>80 ? 'var(--fire)' : 'var(--green)';
+    html += `<div class="meal-summary">Total: ~${total.kkal} kkal • ${total.protein}g protein — target: ~${targets.targetCalories} kkal • ${targets.targetProtein}g protein</div>
+      <div class="meal-summary" style="color:${sodiumColor}">Natrium: ~${total.sodium}mg / ${SODIUM_BUDGET}mg budget harian (${sodiumPct}%)</div>`;
+    document.getElementById('meal-plan-section').innerHTML = html;
+  }
+
+  function updateDashboard() {
+    const profile = getProfile();
+    const checkins = getCheckins();
+    const day = getCurrentDay();
+
+    const complete = isProgramComplete();
+    document.getElementById('program-complete-banner').style.display = complete ? 'block' : 'none';
+    if(complete) {
+      const sessions = Object.keys(getWorkoutLogs()).length;
+      const latestW = checkins.length ? checkins[checkins.length-1].weight : null;
+      const weightChange = (latestW && profile.startWeight) ? (latestW-profile.startWeight).toFixed(1) : null;
+      document.getElementById('program-complete-summary').textContent = weightChange!==null
+        ? `Berat berubah ${weightChange>0?'+':''}${weightChange} kg dari awal • ${sessions} sesi workout tercatat. Mantap, ${profile.name}!`
+        : `${sessions} sesi workout tercatat. Mantap, ${profile.name}!`;
+    }
+
+    document.getElementById('ring-day').textContent = day;
+    drawRing(day/30);
+
+    const latest = checkins[checkins.length-1];
+    profile.currentWeight = latest&&latest.weight ? latest.weight : profile.startWeight;
+    renderMealPlanSection(profile);
+
+    if(latest) {
+      document.getElementById('d-weight').textContent = latest.weight??'—';
+      if(latest.weight && profile.startWeight) {
+        const d = (latest.weight-profile.startWeight).toFixed(1);
+        const el = document.getElementById('d-weight-delta');
+        el.textContent = (d>0?'+':'')+d+' kg dari awal';
+        el.className = 'stat-delta '+(d<=0?'delta-good':'delta-bad');
+      }
+    } else {
+      document.getElementById('d-weight').textContent = profile.startWeight;
+    }
+
+    const bmi = calcBMI(profile.currentWeight, profile.height);
+    if(bmi) {
+      document.getElementById('d-bmi').textContent = bmi.toFixed(1);
+      const cat = bmiCategory(bmi);
+      const catEl = document.getElementById('d-bmi-category');
+      catEl.textContent = cat.label;
+      catEl.style.color = cat.color;
+    } else {
+      document.getElementById('d-bmi').textContent = '—';
+    }
+
+    // Progress bars
+    const waterDays = checkins.filter(c=>c.water).length;
+    const mealDays = checkins.filter(c=>c.meal).length;
+    const sleepDays = checkins.filter(c=>c.sleep).length;
+    const workoutLogs = getWorkoutLogs();
+    const workoutSessions = Object.keys(workoutLogs).length;
+
+    document.getElementById('p-water').textContent = waterDays+'/30 hari';
+    document.getElementById('p-meal').textContent = mealDays+'/30 hari';
+    document.getElementById('p-sleep').textContent = sleepDays+'/30 hari';
+    document.getElementById('p-workout').textContent = workoutSessions+'/16 sesi';
+
+    document.getElementById('pb-water').style.width = (waterDays/30*100)+'%';
+    document.getElementById('pb-meal').style.width = (mealDays/30*100)+'%';
+    document.getElementById('pb-sleep').style.width = (sleepDays/30*100)+'%';
+    document.getElementById('pb-workout').style.width = Math.min(workoutSessions/16*100,100)+'%';
+  }
+
+  // ===== 3D RING =====
+  function drawRing(pct) {
+    const canvas = document.getElementById('ringCanvas');
+    const ctx = canvas.getContext('2d');
+    const W=200,H=200,cx=100,cy=100,r=80,lw=16;
+    ctx.clearRect(0,0,W,H);
+
+    // Shadow ring
+    ctx.beginPath();
+    ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.strokeStyle='rgba(59,130,246,0.08)';
+    ctx.lineWidth=lw+4;
+    ctx.stroke();
+
+    // BG ring
+    ctx.beginPath();
+    ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,0.06)';
+    ctx.lineWidth=lw;
+    ctx.stroke();
+
+    if(pct>0) {
+      // Gradient fill
+      const grad = ctx.createLinearGradient(cx-r,cy,cx+r,cy);
+      grad.addColorStop(0,'#3B82F6');
+      grad.addColorStop(0.5,'#06B6D4');
+      grad.addColorStop(1,'#8B5CF6');
+
+      ctx.beginPath();
+      ctx.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+Math.PI*2*pct);
+      ctx.strokeStyle=grad;
+      ctx.lineWidth=lw;
+      ctx.lineCap='round';
+      ctx.stroke();
+
+      // Glow
+      ctx.beginPath();
+      ctx.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+Math.PI*2*pct);
+      ctx.strokeStyle='rgba(59,130,246,0.3)';
+      ctx.lineWidth=lw+8;
+      ctx.lineCap='round';
+      ctx.globalCompositeOperation='destination-over';
+      ctx.stroke();
+      ctx.globalCompositeOperation='source-over';
+    }
+  }
+
+  // ===== CHECKLIST =====
+  function loadTodayChecks() {
+    const checks = getTodayChecks();
+    ['water','sleep','nosugar','cardio'].forEach(key=>{
+      const box = document.getElementById('c-'+key);
+      const lbl = document.getElementById('l-'+key);
+      if(!box) return;
+      if(checks[key]) {
+        box.classList.add('checked');
+        lbl.classList.add('done');
+      } else {
+        box.classList.remove('checked');
+        lbl.classList.remove('done');
+      }
+    });
+  }
+
+  function toggleCheck(key) {
+    const checks = getTodayChecks();
+    checks[key] = !checks[key];
+    saveTodayChecks(checks);
+    loadTodayChecks();
+    if(['sarapan','siang','malam'].includes(key)) updateDashboard();
+  }
+
+  // ===== CHECK-IN =====
+  function saveCheckin() {
+    const weight = parseFloat(document.getElementById('ci-weight').value);
+    const note = document.getElementById('ci-note').value;
+
+    if(!weight) { showToast('Masukkan berat badan dulu!','#EF4444'); return; }
+    if(weight<20||weight>300) { showToast('Berat badan gak valid (20-300 kg)','#EF4444'); return; }
+
+    const checkins = getCheckins();
+    const today = todayStr();
+    const existing = checkins.findIndex(c=>c.date===today);
+    const profile = getProfile();
+    const plan = getOrInitMealPlan(profile);
+    const checks = getTodayChecks();
+    const mealComplete = ['sarapan','siang','malam'].every(k=>!(plan[k]||[]).length || checks[k]);
+    const entry = { date:today, weight, note,
+      water: checks.water||false, meal: mealComplete,
+      sleep: checks.sleep||false };
+
+    if(existing>=0) checkins[existing]=entry;
+    else checkins.push(entry);
+    saveCheckins(checkins);
+
+    document.getElementById('ci-weight').value='';
+    document.getElementById('ci-note').value='';
+
+    showToast('Check-in tersimpan! 💪');
+    updateDashboard();
+  }
+
+  // ===== WORKOUT PAGE =====
+  let currentWorkoutExercises = [];
+  let timerState = {};
+  let workoutSession = null;
+  let wpStopwatchSeconds = 0;
+  let wpStopwatchInterval = null;
+
+  function startWalkingInterval() {
+    const fastSpeed = parseFloat(document.getElementById('wp-fast-speed').value)||6;
+    const slowSpeed = parseFloat(document.getElementById('wp-slow-speed').value)||4;
+    const fastMin = parseFloat(document.getElementById('wp-fast-min').value)||2;
+    const slowMin = parseFloat(document.getElementById('wp-slow-min').value)||1;
+    const durationField = document.getElementById('wp-duration');
+    const targetDurationInput = parseFloat(durationField.value);
+    const placeholderDuration = parseFloat(durationField.placeholder);
+    const totalMin = targetDurationInput || placeholderDuration || (fastMin+slowMin)*4;
+
+    if(timerState.intervalId) clearInterval(timerState.intervalId);
+    closeTimer();
+    document.getElementById('tempo-track').style.display = 'none';
+    document.getElementById('timer-video-wrap').style.display = 'none';
+    timerState = {
+      type:'interval', fastSpeed, slowSpeed,
+      fastDuration: Math.round(fastMin*60), slowDuration: Math.round(slowMin*60),
+      phase:'fast', phaseRemaining: Math.round(fastMin*60),
+      totalElapsed:0, totalTarget: Math.round(totalMin*60),
+      running:true
+    };
+    document.getElementById('timerPanel').style.display = 'block';
+    document.getElementById('timer-ex-name').textContent = '🏃 Walking Pad Interval';
+    document.getElementById('timer-toggle-btn').style.display = '';
     document.getElementById('timer-toggle-btn').textContent = '⏸ Pause';
+    document.getElementById('timer-skip-btn').style.display = '';
+    playPhaseTone('up');
+    updateTimerDisplay();
     timerState.intervalId = setInterval(tickTimer, 1000);
   }
-}
 
-function resetTimer() {
-  if(!timerState.type) return;
-  clearInterval(timerState.intervalId);
-  timerState.running = false;
-  document.getElementById('timer-toggle-btn').textContent = '▶ Mulai';
-  if(timerState.type==='duration'||timerState.type==='rest') timerState.remaining = timerState.totalSeconds;
-  else if(timerState.type==='tempo') { timerState.repCount = 0; resetTempoDot(); setupTempoPhase('down'); }
-  else if(timerState.type==='explosive') timerState.totalSeconds = 0;
-  else if(timerState.type==='interval') {
-    timerState.phase = 'fast';
-    timerState.phaseRemaining = timerState.fastDuration;
-    timerState.totalElapsed = 0;
+  function toggleWpStopwatch() {
+    const btn = document.getElementById('wp-timer-btn');
+    if(wpStopwatchInterval) {
+      clearInterval(wpStopwatchInterval);
+      wpStopwatchInterval = null;
+      btn.textContent = '▶ Mulai Jalan';
+      const durInput = document.getElementById('wp-duration');
+      if(durInput) durInput.value = Math.round((wpStopwatchSeconds/60)*2)/2;
+      playDoneChime();
+    } else {
+      btn.textContent = '⏸ Stop';
+      wpStopwatchInterval = setInterval(()=>{
+        wpStopwatchSeconds++;
+        document.getElementById('wp-timer-display').textContent = formatTime(wpStopwatchSeconds);
+      }, 1000);
+    }
   }
-  updateTimerDisplay();
-}
 
-function skipOrFinish() {
-  if(!timerState.type) return;
-  if(timerState.type==='interval') {
-    timerState.phase = timerState.phase==='fast' ? 'slow' : 'fast';
-    timerState.phaseRemaining = timerState.phase==='fast' ? timerState.fastDuration : timerState.slowDuration;
-    playPhaseTone(timerState.phase==='fast' ? 'up' : 'down');
+  function resetWpStopwatch() {
+    clearInterval(wpStopwatchInterval);
+    wpStopwatchInterval = null;
+    wpStopwatchSeconds = 0;
+    const disp = document.getElementById('wp-timer-display');
+    if(disp) disp.textContent = '00:00';
+    const btn = document.getElementById('wp-timer-btn');
+    if(btn) btn.textContent = '▶ Mulai Jalan';
+  }
+
+  function tempoLabel(ex) {
+    if(ex.alat==='—') return '⏱';
+    if(ex.explosive) return '⚡ Explosive';
+    if(ex.tempo) return ex.tempo.join('-');
+    return '—';
+  }
+
+  function tempoTitle(ex) {
+    if(ex.alat==='—') return 'Berbasis waktu — pakai timer durasi';
+    if(ex.explosive) return 'Gerakan eksplosif dari pinggul, gak perlu tempo lambat';
+    if(ex.tempo) return `Turun ${ex.tempo[0]}s • Tahan ${ex.tempo[1]}s • Naik ${ex.tempo[2]}s`;
+    return '';
+  }
+
+  // ===== PERSONALIZATION (fitness level, goal, body data) =====
+  const FITNESS_WEIGHT_MULT = { pemula:1, menengah:1.4, mahir:1.8 };
+  const FITNESS_PROGRESSION_DAYS = { pemula:14, menengah:10, mahir:7 };
+  const FITNESS_SETS_BONUS = { pemula:0, menengah:1, mahir:2 };
+  const GOAL_REST_MULT = { fatloss:0.6, recomposition:1, muscle:1.3 };
+  const EQUIPMENT_MAX = { DB:12, KB:12, BB:30 };
+
+  function getGenderFactor(gender) { return gender==='wanita' ? 0.8 : 1; }
+  function getAgeFactor(age) {
+    if(!age) return 1;
+    if(age<30) return 1;
+    if(age<=45) return 0.95;
+    if(age<=60) return 0.85;
+    return 0.75;
+  }
+  function getBodyWeightFactor(weight) {
+    if(!weight) return 1;
+    return Math.min(1.25, Math.max(0.85, weight/70));
+  }
+
+  function getAdjustedWeight(ex, day, profile) {
+    if(!ex.defaultWeight) return ex.defaultWeight;
+    const level = profile.fitnessLevel||'pemula';
+    const mult = (FITNESS_WEIGHT_MULT[level]||1) * getGenderFactor(profile.gender) * getAgeFactor(profile.age) * getBodyWeightFactor(profile.currentWeight||profile.startWeight);
+    const ratio = ex.equipmentRatio ? (ex.equipmentRatio[ex.alat]??1) : 1;
+    let weight = ex.defaultWeight * mult * ratio;
+    const progressionDays = FITNESS_PROGRESSION_DAYS[level]||14;
+    const bumps = Math.floor((day-1)/progressionDays);
+    weight += bumps*2.5;
+    weight = Math.round(weight); // plat cuma ada 2kg/3kg — kombinasinya selalu pas di kg bulat
+    const cap = EQUIPMENT_MAX[ex.alat]||30;
+    return Math.min(cap, Math.max(2, weight));
+  }
+
+  function getAdjustedSets(ex, profile) {
+    if(ex.alat==='—') return ex.sets;
+    const level = profile.fitnessLevel||'pemula';
+    return ex.sets + (FITNESS_SETS_BONUS[level]||0);
+  }
+
+  function getAdjustedReps(ex, profile) {
+    if(ex.alat==='—') return ex.reps;
+    const match = ex.reps.match(/^(\d+)(.*)$/);
+    if(!match) return ex.reps;
+    let n = parseInt(match[1]);
+    const goal = profile.goal||'recomposition';
+    if(goal==='fatloss') n += 5;
+    else if(goal==='muscle') n = Math.max(6, n-3);
+    return n+match[2];
+  }
+
+  function getEffectiveExercise(ex, day, profile) {
+    return { ...ex,
+      sets: getAdjustedSets(ex, profile),
+      reps: getAdjustedReps(ex, profile),
+      defaultWeight: getAdjustedWeight(ex, day, profile)
+    };
+  }
+
+  const FITNESS_WALK_SPEED_BONUS = { pemula:0, menengah:0.5, mahir:1 };
+  function getWalkingPadTarget(day, profile) {
+    const level = profile.fitnessLevel||'pemula';
+    const progressionDays = FITNESS_PROGRESSION_DAYS[level]||14;
+    const bumps = Math.floor((day-1)/progressionDays);
+    const heightFactor = Math.min(1.08, Math.max(0.95, (profile.height||170)/170));
+    const ageFactor = getAgeFactor(profile.age);
+    let speed = (5 + (FITNESS_WALK_SPEED_BONUS[level]||0) + bumps*0.5) * heightFactor * ageFactor;
+    speed = Math.min(6.5, Math.max(4, Math.round(speed*2)/2));
+    const duration = Math.min(45, 20 + bumps*5);
+    return { speed, duration };
+  }
+
+  function renderWorkoutPage() {
+    if(timerState.intervalId) clearInterval(timerState.intervalId);
+    timerState = {};
+    workoutSession = null;
+    clearInterval(wpStopwatchInterval);
+    wpStopwatchInterval = null;
+    wpStopwatchSeconds = 0;
+    const wrap = document.getElementById('workout-content');
+
+    if(isProgramComplete()) {
+      currentWorkoutExercises = [];
+      wrap.innerHTML = `<div class="form-card" style="text-align:center;background:linear-gradient(135deg,rgba(59,130,246,0.12),rgba(139,92,246,0.12))">
+        <h2>🎉 30 Hari Selesai!</h2>
+        <p class="form-subtitle">Program workout kamu udah kelar. Mau lanjut lagi?</p>
+        <button class="btn-primary" onclick="restartCycle()">🔄 Mulai Cycle Baru</button>
+      </div>`;
+      return;
+    }
+
+    const day = getCurrentDay();
+    const workout = getWorkoutForDay(day);
+    const todayKey = todayStr();
+    const logs = getWorkoutLogs();
+    const todayLog = logs[todayKey]||{};
+    const profile = getProfile()||{};
+    const checkins = getCheckins();
+    profile.currentWeight = checkins.length ? (checkins[checkins.length-1].weight||profile.startWeight) : profile.startWeight;
+    const equipmentPrefs = getEquipmentPrefs();
+    currentWorkoutExercises = workout ? workout.exercises.map(ex=>{
+      const options = ex.equipmentOptions||[ex.alat];
+      const pref = equipmentPrefs[ex.name];
+      const chosenAlat = ex.alat==='—' ? ex.alat : (options.includes(pref) ? pref : ex.alat);
+      return getEffectiveExercise({ ...ex, alat:chosenAlat }, day, profile);
+    }) : [];
+
+    let html = '';
+
+    if(workout) {
+      const allDone = currentWorkoutExercises.length>0 && currentWorkoutExercises.every((ex,i)=>todayLog['ex_'+i+'_done']);
+      html += `<div class="workout-section">
+        <h3>${workout.name} <span class="day-badge">Hari ${day} • ${workout.day}</span>
+          <button class="btn-primary" id="start-all-btn" style="margin-left:auto;padding:8px 16px;font-size:13px" onclick="startFullWorkout()" ${allDone?'disabled':''}>${allDone?'✓ Semua Selesai':'▶ Mulai Workout'}</button>
+        </h3>
+        ${workout.warmupTip ? `<div style="font-size:12px;color:var(--muted);margin-bottom:14px;padding:10px 14px;background:var(--surface2);border-radius:10px">💡 <strong>Pemanasan:</strong> ${workout.warmupTip}</div>` : ''}
+        <div class="exercise-table">
+          <table>
+            <thead><tr><th>Exercise</th><th>Alat</th><th>Otot</th><th>Set</th><th>Rep</th><th>Tempo</th><th>Berat (kg)</th><th>Aksi</th></tr></thead>
+            <tbody>`;
+      const exercisePRs = getExercisePRs();
+      currentWorkoutExercises.forEach((ex,i)=>{
+        const exKey = 'ex_'+i;
+        const done = todayLog[exKey+'_done']||false;
+        const wt = todayLog[exKey+'_weight']!==undefined ? todayLog[exKey+'_weight'] : (ex.defaultWeight||'');
+        const alatColor = ex.alat==='BB'?'var(--fire)':ex.alat==='KB'?'var(--accent3)':ex.alat==='DB'?'var(--accent2)':'var(--muted)';
+        const equipOptions = ex.equipmentOptions||[ex.alat];
+        const alatCell = (ex.alat==='—' || equipOptions.length<=1)
+          ? `<span style="font-size:11px;font-weight:700;color:${alatColor};background:rgba(255,255,255,0.06);padding:2px 8px;border-radius:99px">${ex.alat}</span>`
+          : `<select onchange="setExerciseAlat('${ex.name}',this.value,${i})" ${done?'disabled':''} style="font-size:11px;font-weight:700;color:${alatColor};background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:8px;padding:3px 6px;cursor:pointer">
+              ${equipOptions.map(opt=>`<option value="${opt}" ${ex.alat===opt?'selected':''}>${opt} (max ${EQUIPMENT_MAX[opt]}kg)</option>`).join('')}
+            </select>`;
+        const pr = exercisePRs[ex.name];
+        const prBadge = pr ? `<br><span style="font-size:10px;color:var(--fire)" title="Personal record — beban terberat yang pernah dicapai">🏆 PR: ${pr}kg</span>` : '';
+        html += `<tr>
+          <td><strong>${ex.name}</strong>${prBadge}</td>
+          <td>${alatCell}</td>
+          <td style="color:var(--muted)">${ex.muscle}</td>
+          <td>${ex.sets}</td>
+          <td>${ex.reps}</td>
+          <td><span class="tempo-badge" title="${tempoTitle(ex)}">${tempoLabel(ex)}</span></td>
+          <td><input class="weight-input" type="number" step="1" min="2" value="${wt}" placeholder="0" onchange="saveExWeight('${todayKey}','${exKey}',this.value)"></td>
+          <td><div style="display:flex;gap:6px;align-items:center">
+            <button class="start-btn" id="start-${i}" onclick="startSingleExercise(${i})" ${done?'disabled':''}>${done?'✓':'▶'}</button>
+            <button class="done-toggle ${done?'on':''}" id="dt-${i}" onclick="toggleExDone('${todayKey}','${exKey}',${i})"></button>
+          </div></td>
+        </tr>`;
+      });
+      html += `</tbody></table></div>
+        <div class="timer-panel" id="timerPanel" style="display:none">
+          <div class="timer-panel-header">
+            <h3 id="timer-ex-name">—</h3>
+            <div style="display:flex;gap:8px">
+              <button class="btn-secondary" id="sound-toggle-btn" onclick="toggleSound()">${isSoundOn()?'🔊':'🔇'}</button>
+              <button class="btn-secondary" onclick="closeTimer()">✕ Tutup</button>
+            </div>
+          </div>
+          <div id="timer-video-wrap" style="display:none;margin-bottom:16px">
+            <div style="position:relative;width:100%;padding-bottom:56.25%;border-radius:12px;overflow:hidden">
+              <iframe id="timer-video" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" src="" title="Video pemanasan" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+            </div>
+          </div>
+          <div class="timer-phase down" id="timer-phase">Durasi</div>
+          <div class="tempo-track" id="tempo-track" style="display:none">
+            <div class="tempo-dot" id="tempo-dot"></div>
+          </div>
+          <div class="timer-display" id="timer-display">00:00</div>
+          <div class="timer-meta" id="timer-meta"></div>
+          <div class="timer-controls">
+            <button class="btn-primary" id="timer-toggle-btn" onclick="toggleTimer()">▶ Mulai</button>
+            <button class="btn-secondary" onclick="resetTimer()">↺ Reset</button>
+            <button class="btn-secondary" id="timer-skip-btn" onclick="skipOrFinish()">⏭ Lanjut</button>
+          </div>
+        </div>
+      </div>`;
+
+      // Walking pad cardio
+      const wpTarget = getWalkingPadTarget(day, profile);
+      html += `<div class="form-card" style="margin-top:0">
+        <h2>🏃 Walking Pad</h2>
+        <div class="form-subtitle">Catat cardio kamu hari ini — speed disesuaikan fitness level, tinggi & umur kamu</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Kecepatan (km/h)</label>
+            <input type="number" id="wp-speed" step="0.5" placeholder="${wpTarget.speed}" value="${todayLog.wpSpeed||''}">
+          </div>
+          <div class="form-group">
+            <label>Durasi (menit)</label>
+            <input type="number" id="wp-duration" placeholder="${wpTarget.duration}" value="${todayLog.wpDuration||''}">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px;background:var(--surface2);border-radius:10px;flex-wrap:wrap">
+          <span style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;min-width:64px" id="wp-timer-display">00:00</span>
+          <button class="btn-secondary" id="wp-timer-btn" onclick="toggleWpStopwatch()">▶ Mulai Jalan</button>
+          <button class="btn-secondary" onclick="resetWpStopwatch()">↺ Reset</button>
+          <span style="font-size:11px;color:var(--muted);margin-left:auto">Stop = auto-isi durasi</span>
+        </div>
+        <button class="btn-secondary" onclick="saveCardio('${todayKey}')" style="margin-top:8px">Simpan Cardio</button>
+        <div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:10px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">🔁 Mode Interval (opsional) — gantian cepat/santai otomatis, lebih efektif buat visceral fat</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Speed Cepat (km/h)</label>
+              <input type="number" id="wp-fast-speed" step="0.5" value="${wpTarget.speed}">
+            </div>
+            <div class="form-group">
+              <label>Speed Santai (km/h)</label>
+              <input type="number" id="wp-slow-speed" step="0.5" value="${Math.max(4,wpTarget.speed-1.5)}">
+            </div>
+            <div class="form-group">
+              <label>Durasi Cepat (menit)</label>
+              <input type="number" id="wp-fast-min" step="0.5" value="2">
+            </div>
+            <div class="form-group">
+              <label>Durasi Santai (menit)</label>
+              <input type="number" id="wp-slow-min" step="0.5" value="1">
+            </div>
+          </div>
+          <button class="btn-primary" onclick="startWalkingInterval()" style="margin-top:8px;width:100%">▶ Mulai Interval Walking</button>
+        </div>
+      </div>`;
+    } else {
+      // Rest day
+      html += `<div class="form-card">
+        <h2>😴 Rest Day</h2>
+        <div class="form-subtitle">Hari ini jadwalnya istirahat. Tubuh kamu recover dan tumbuh saat rest!</div>
+        <p style="color:var(--muted);font-size:14px;line-height:1.8">
+          ✅ Tetap minum air putih 2.5-3L<br>
+          ✅ Makan sesuai plan<br>
+          ✅ Tidur cukup 7-8 jam<br>
+          ✅ Jalan kaki santai boleh
+        </p>
+      </div>`;
+
+      // Still show walking pad option
+      html += `<div class="form-card">
+        <h2>🚶 Walking Santai (Opsional)</h2>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Kecepatan (km/h)</label>
+            <input type="number" id="wp-speed" step="0.5" placeholder="4-5" value="${todayLog.wpSpeed||''}">
+          </div>
+          <div class="form-group">
+            <label>Durasi (menit)</label>
+            <input type="number" id="wp-duration" placeholder="20" value="${todayLog.wpDuration||''}">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px;background:var(--surface2);border-radius:10px;flex-wrap:wrap">
+          <span style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;min-width:64px" id="wp-timer-display">00:00</span>
+          <button class="btn-secondary" id="wp-timer-btn" onclick="toggleWpStopwatch()">▶ Mulai Jalan</button>
+          <button class="btn-secondary" onclick="resetWpStopwatch()">↺ Reset</button>
+          <span style="font-size:11px;color:var(--muted);margin-left:auto">Stop = auto-isi durasi</span>
+        </div>
+        <button class="btn-secondary" onclick="saveCardio('${todayKey}')" style="margin-top:8px">Simpan</button>
+        <div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:10px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">🔁 Mode Interval (opsional)</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Speed Cepat (km/h)</label>
+              <input type="number" id="wp-fast-speed" step="0.5" value="5">
+            </div>
+            <div class="form-group">
+              <label>Speed Santai (km/h)</label>
+              <input type="number" id="wp-slow-speed" step="0.5" value="4">
+            </div>
+            <div class="form-group">
+              <label>Durasi Cepat (menit)</label>
+              <input type="number" id="wp-fast-min" step="0.5" value="2">
+            </div>
+            <div class="form-group">
+              <label>Durasi Santai (menit)</label>
+              <input type="number" id="wp-slow-min" step="0.5" value="1">
+            </div>
+          </div>
+          <button class="btn-primary" onclick="startWalkingInterval()" style="margin-top:8px;width:100%">▶ Mulai Interval Walking</button>
+        </div>
+      </div>`;
+    }
+
+    wrap.innerHTML = html;
+  }
+
+  function saveExWeight(dayKey, exKey, val) {
+    const logs = getWorkoutLogs();
+    if(!logs[dayKey]) logs[dayKey]={};
+    logs[dayKey][exKey+'_weight'] = val;
+    saveWorkoutLog(dayKey, logs[dayKey]);
+  }
+
+  function toggleExDone(dayKey, exKey, idx) {
+    const logs = getWorkoutLogs();
+    if(!logs[dayKey]) logs[dayKey]={};
+    const nowDone = !logs[dayKey][exKey+'_done'];
+    logs[dayKey][exKey+'_done'] = nowDone;
+    saveWorkoutLog(dayKey, logs[dayKey]);
+    const btn = document.getElementById('dt-'+idx);
+    btn.classList.toggle('on');
+    const startBtn = document.getElementById('start-'+idx);
+    if(startBtn) { startBtn.disabled = nowDone; startBtn.textContent = nowDone?'✓':'▶'; }
+    refreshStartAllButtonState();
+    updateDashboard();
+  }
+
+  function refreshStartAllButtonState() {
+    const btn = document.getElementById('start-all-btn');
+    if(!btn || !currentWorkoutExercises.length) return;
+    const todayKey = todayStr();
+    const logs = getWorkoutLogs();
+    const todayLog = logs[todayKey]||{};
+    const allDone = currentWorkoutExercises.every((ex,i)=>todayLog['ex_'+i+'_done']);
+    btn.disabled = allDone;
+    btn.textContent = allDone ? '✓ Semua Selesai' : '▶ Mulai Workout';
+  }
+
+  function setExerciseAlat(name, alat, i) {
+    const prefs = getEquipmentPrefs();
+    prefs[name] = alat;
+    saveEquipmentPrefs(prefs);
+    const todayKey = todayStr();
+    const logs = getWorkoutLogs();
+    if(logs[todayKey] && logs[todayKey]['ex_'+i+'_weight']!==undefined) {
+      delete logs[todayKey]['ex_'+i+'_weight'];
+      saveWorkoutLog(todayKey, logs[todayKey]);
+    }
+    renderWorkoutPage();
+  }
+
+  // ===== TIMER SOUND =====
+  let audioCtx = null;
+  function isSoundOn() { return load('shred_sound_on', true); }
+  function toggleSound() {
+    save('shred_sound_on', !isSoundOn());
+    const btn = document.getElementById('sound-toggle-btn');
+    if(btn) btn.textContent = isSoundOn()?'🔊':'🔇';
+  }
+  function getAudioCtx() {
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function playBeep(freq, duration=150, type='sine', volume=0.2) {
+    if(!isSoundOn()) return;
+    try {
+      const ctx = getAudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(volume, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration/1000);
+      osc.start();
+      osc.stop(ctx.currentTime + duration/1000);
+    } catch(e) {}
+  }
+  function playPhaseTone(phase) {
+    const freqs = { down:329.6, hold:440, up:587.3 };
+    playBeep(freqs[phase], 220, 'sine', 0.25);
+  }
+  function playTick() { playBeep(220, 60, 'square', 0.08); }
+  function playDoneChime() {
+    playBeep(659.3, 150, 'sine', 0.25);
+    setTimeout(()=>playBeep(880, 250, 'sine', 0.25), 160);
+  }
+
+  // ===== EXERCISE TIMER =====
+  function parseDurationSeconds(reps) {
+    const nums = (reps.match(/\d+(\.\d+)?/g)||[]).map(Number);
+    if(!nums.length) return 60;
+    const avg = nums.reduce((a,b)=>a+b,0)/nums.length;
+    return Math.round(reps.includes('menit') ? avg*60 : avg);
+  }
+
+  function formatTime(s) {
+    const m = Math.floor(s/60).toString().padStart(2,'0');
+    const sec = Math.floor(s%60).toString().padStart(2,'0');
+    return `${m}:${sec}`;
+  }
+
+  function startSingleExercise(i) {
+    const ex = currentWorkoutExercises[i];
+    if(!ex) return;
+    const todayKey = todayStr();
+    const logs = getWorkoutLogs();
+    if(logs[todayKey] && logs[todayKey]['ex_'+i+'_done']) return; // already completed, blocked
+    const profile = getProfile()||{};
+    const blocks = buildSessionBlocks([{ ex, realIndex:i }], profile);
+    if(!blocks.length) return;
+    workoutSession = { blocks, idx:0 };
+    document.getElementById('timerPanel').style.display = 'block';
+    document.getElementById('timer-toggle-btn').style.display = '';
+    document.getElementById('timer-skip-btn').style.display = '';
+    runSessionBlock(0);
+  }
+
+  // Configures timerState for a single work block (standalone or inside a session)
+  function setupWorkBlock(ex, setInfo) {
+    const setLabel = setInfo ? `Set ${setInfo.setNum}/${setInfo.totalSets} — ` : '';
+    document.getElementById('tempo-track').style.display = ex.tempo ? 'block' : 'none';
+    const videoWrap = document.getElementById('timer-video-wrap');
+    if(ex.videoId) {
+      document.getElementById('timer-video').src = `https://www.youtube.com/embed/${ex.videoId}`;
+      videoWrap.style.display = 'block';
+    } else {
+      document.getElementById('timer-video').src = '';
+      videoWrap.style.display = 'none';
+    }
+    if(ex.alat === '—') {
+      timerState.type = 'duration';
+      timerState.totalSeconds = parseDurationSeconds(ex.reps);
+      timerState.remaining = timerState.totalSeconds;
+      document.getElementById('timer-meta').innerHTML =
+        `${setLabel}Target: <input type="number" id="timer-duration-input" value="${Math.round(timerState.totalSeconds/60)}" min="1" style="width:56px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-family:'Space Grotesk',sans-serif;text-align:center" onchange="applyDurationInput()"> menit`;
+    } else if(ex.explosive) {
+      timerState.type = 'explosive';
+      timerState.totalSeconds = 0;
+      document.getElementById('timer-meta').textContent =
+        `${setLabel}${ex.reps} reps — gerakan cepat & kuat dari pinggul. Klik "⏭ Lanjut" kalau set sudah selesai.`;
+    } else if(ex.tempo) {
+      timerState.type = 'tempo';
+      timerState.tempo = ex.tempo;
+      timerState.repCount = 0;
+      timerState.targetReps = parseInt(ex.reps)||0;
+      timerState.setLabel = setLabel;
+      resetTempoDot();
+      setupTempoPhase('down');
+    }
+  }
+
+  function applyDurationInput() {
+    const val = parseFloat(document.getElementById('timer-duration-input').value)||1;
+    timerState.totalSeconds = Math.round(val*60);
+    timerState.remaining = timerState.totalSeconds;
     updateTimerDisplay();
-    return;
   }
-  clearInterval(timerState.intervalId);
-  if(workoutSession) {
-    advanceSession();
-  } else {
-    timerState.running = false;
-    document.getElementById('timer-toggle-btn').textContent = '▶ Mulai';
-    playDoneChime();
-    showToast('Set selesai! ✅');
+
+  function setupTempoPhase(phase) {
+    timerState.phase = phase;
+    const idx = phase==='down'?0:phase==='hold'?1:2;
+    const dur = timerState.tempo[idx];
+    if(phase==='hold' && !dur) { advanceTempoPhase(); return; }
+    timerState.phaseRemaining = dur;
+    playPhaseTone(phase);
+    animateTempoDot(phase, dur);
   }
-}
 
-function closeTimer() {
-  clearInterval(timerState.intervalId);
-  timerState = {};
-  workoutSession = null;
-  document.getElementById('timer-video').src = '';
-  document.getElementById('timer-video-wrap').style.display = 'none';
-  document.getElementById('timerPanel').style.display = 'none';
-}
+  function animateTempoDot(phase, durationSec) {
+    const dot = document.getElementById('tempo-dot');
+    if(!dot) return;
+    dot.classList.remove('hold');
+    if(phase==='down') {
+      dot.style.transition = `top ${durationSec}s linear`;
+      requestAnimationFrame(()=>{ dot.style.top = 'calc(100% - 56px)'; });
+    } else if(phase==='up') {
+      dot.style.transition = `top ${durationSec}s linear`;
+      requestAnimationFrame(()=>{ dot.style.top = '8px'; });
+    } else if(phase==='hold') {
+      dot.style.transition = 'none';
+      dot.classList.add('hold');
+    }
+  }
 
-function tickTimer() {
-  if(timerState.type==='duration') {
-    timerState.remaining--;
-    if(timerState.remaining<=0) {
-      timerState.remaining = 0;
-      timerState.running = false;
+  function resetTempoDot() {
+    const dot = document.getElementById('tempo-dot');
+    if(!dot) return;
+    dot.classList.remove('hold');
+    dot.style.transition = 'none';
+    dot.style.top = '8px';
+  }
+
+  function advanceTempoPhase() {
+    if(timerState.phase==='down') { setupTempoPhase('hold'); return; }
+    if(timerState.phase==='hold') { setupTempoPhase('up'); return; }
+    timerState.repCount++;
+    if(timerState.targetReps && timerState.repCount>=timerState.targetReps) {
       clearInterval(timerState.intervalId);
+      timerState.running = false;
       document.getElementById('timer-toggle-btn').textContent = '▶ Mulai';
       playDoneChime();
       if(timerState.session) setTimeout(advanceSession, 500);
-      else showToast('Waktu selesai! 🎉');
-    } else if(timerState.remaining<=3) {
-      playTick();
+      else showToast('Set selesai! ✅');
+      return;
     }
-  } else if(timerState.type==='rest') {
-    timerState.remaining--;
-    if(timerState.remaining<=0) {
-      timerState.remaining = 0;
-      clearInterval(timerState.intervalId);
-      playDoneChime();
-      setTimeout(advanceSession, 400);
-    } else if(timerState.remaining<=3) {
-      playTick();
-    }
-  } else if(timerState.type==='tempo') {
-    timerState.phaseRemaining--;
-    if(timerState.phaseRemaining<=0) advanceTempoPhase();
-    else playTick();
-  } else if(timerState.type==='explosive') {
-    timerState.totalSeconds++;
-  } else if(timerState.type==='interval') {
-    timerState.totalElapsed++;
-    timerState.phaseRemaining--;
-    if(timerState.totalElapsed>=timerState.totalTarget) {
+    setupTempoPhase('down');
+  }
+
+  function toggleTimer() {
+    if(!timerState.type) return;
+    if(timerState.running) {
       timerState.running = false;
       clearInterval(timerState.intervalId);
-      document.getElementById('timer-toggle-btn').textContent = '▶ Mulai';
-      const durInput = document.getElementById('wp-duration');
-      if(durInput) durInput.value = Math.round(timerState.totalElapsed/60*2)/2;
-      playDoneChime();
-      showToast('Interval walking selesai! 🏃');
-    } else if(timerState.phaseRemaining<=0) {
+      document.getElementById('timer-toggle-btn').textContent = '▶ Lanjut';
+    } else {
+      timerState.running = true;
+      document.getElementById('timer-toggle-btn').textContent = '⏸ Pause';
+      timerState.intervalId = setInterval(tickTimer, 1000);
+    }
+  }
+
+  function resetTimer() {
+    if(!timerState.type) return;
+    clearInterval(timerState.intervalId);
+    timerState.running = false;
+    document.getElementById('timer-toggle-btn').textContent = '▶ Mulai';
+    if(timerState.type==='duration'||timerState.type==='rest') timerState.remaining = timerState.totalSeconds;
+    else if(timerState.type==='tempo') { timerState.repCount = 0; resetTempoDot(); setupTempoPhase('down'); }
+    else if(timerState.type==='explosive') timerState.totalSeconds = 0;
+    else if(timerState.type==='interval') {
+      timerState.phase = 'fast';
+      timerState.phaseRemaining = timerState.fastDuration;
+      timerState.totalElapsed = 0;
+    }
+    updateTimerDisplay();
+  }
+
+  function skipOrFinish() {
+    if(!timerState.type) return;
+    if(timerState.type==='interval') {
       timerState.phase = timerState.phase==='fast' ? 'slow' : 'fast';
       timerState.phaseRemaining = timerState.phase==='fast' ? timerState.fastDuration : timerState.slowDuration;
       playPhaseTone(timerState.phase==='fast' ? 'up' : 'down');
-    } else if(timerState.phaseRemaining<=3) {
-      playTick();
+      updateTimerDisplay();
+      return;
+    }
+    clearInterval(timerState.intervalId);
+    if(workoutSession) {
+      advanceSession();
+    } else {
+      timerState.running = false;
+      document.getElementById('timer-toggle-btn').textContent = '▶ Mulai';
+      playDoneChime();
+      showToast('Set selesai! ✅');
     }
   }
-  updateTimerDisplay();
-}
 
-function updateTimerDisplay() {
-  const phaseEl = document.getElementById('timer-phase');
-  const dispEl = document.getElementById('timer-display');
-  if(timerState.type==='duration') {
-    phaseEl.textContent = 'Durasi';
-    phaseEl.className = 'timer-phase down';
-    dispEl.textContent = formatTime(timerState.remaining);
-  } else if(timerState.type==='rest') {
-    phaseEl.textContent = '😮‍💨 Istirahat';
-    phaseEl.className = 'timer-phase hold';
-    dispEl.textContent = formatTime(timerState.remaining);
-  } else if(timerState.type==='tempo') {
-    const labels = {down:'⬇ Turun',hold:'⏸ Tahan',up:'⬆ Naik'};
-    phaseEl.textContent = labels[timerState.phase];
-    phaseEl.className = 'timer-phase '+timerState.phase;
-    dispEl.textContent = timerState.phaseRemaining;
-    document.getElementById('timer-meta').textContent =
-      `${timerState.setLabel||''}${timerState.ex.reps} reps — Rep ke-${Math.min(timerState.repCount+1,timerState.targetReps||timerState.repCount+1)} • Tempo ${timerState.tempo.join('-')}`;
-  } else if(timerState.type==='explosive') {
-    phaseEl.textContent = '⚡ Eksplosif';
-    phaseEl.className = 'timer-phase hold';
-    dispEl.textContent = formatTime(timerState.totalSeconds);
-  } else if(timerState.type==='interval') {
-    const isFast = timerState.phase==='fast';
-    phaseEl.textContent = isFast ? `⚡ CEPAT (${timerState.fastSpeed} km/h)` : `😌 Santai (${timerState.slowSpeed} km/h)`;
-    phaseEl.className = 'timer-phase '+(isFast?'up':'down');
-    dispEl.textContent = formatTime(timerState.phaseRemaining);
-    document.getElementById('timer-meta').textContent =
-      `Total: ${formatTime(timerState.totalElapsed)} / ${formatTime(timerState.totalTarget)}`;
-  }
-}
-
-// ===== FULL WORKOUT SESSION (auto-advance through all exercises) =====
-// entries: array of { ex, realIndex } — realIndex is the position in currentWorkoutExercises,
-// used to mark the correct row/log entry done regardless of how the session was scoped.
-function buildSessionBlocks(entries, profile) {
-  const restMult = GOAL_REST_MULT[profile.goal||'recomposition']||1;
-  const blocks = [];
-  entries.forEach((entry,idx)=>{
-    const ex = entry.ex;
-    for(let s=1;s<=ex.sets;s++) {
-      blocks.push({ type:'work', ex, realIndex:entry.realIndex, setNum:s, totalSets:ex.sets });
-      const lastSet = s===ex.sets;
-      const lastEntry = idx===entries.length-1;
-      if(lastSet && lastEntry) continue;
-      const restSec = lastSet ? 20 : (ex.alat==='—' ? 20 : Math.round((ex.explosive ? 45 : 60)*restMult));
-      const label = lastSet ? `Siap-siap: ${entries[idx+1].ex.name}` : `Istirahat — ${ex.name}`;
-      blocks.push({ type:'rest', seconds:restSec, label });
-    }
-  });
-  return blocks;
-}
-
-function startFullWorkout() {
-  if(!currentWorkoutExercises.length) return;
-  const todayKey = todayStr();
-  const logs = getWorkoutLogs();
-  const todayLog = logs[todayKey]||{};
-  const entries = currentWorkoutExercises
-    .map((ex,i)=>({ ex, realIndex:i }))
-    .filter(entry=>!todayLog['ex_'+entry.realIndex+'_done']);
-  if(!entries.length) return; // everything already completed, blocked
-  const profile = getProfile()||{};
-  const blocks = buildSessionBlocks(entries, profile);
-  if(!blocks.length) return;
-  workoutSession = { blocks, idx:0 };
-  document.getElementById('timerPanel').style.display = 'block';
-  document.getElementById('timer-toggle-btn').style.display = '';
-  document.getElementById('timer-skip-btn').style.display = '';
-  runSessionBlock(0);
-}
-
-function runSessionBlock(idx) {
-  if(timerState.intervalId) clearInterval(timerState.intervalId);
-  if(!workoutSession || idx>=workoutSession.blocks.length) { finishSession(); return; }
-  workoutSession.idx = idx;
-  const block = workoutSession.blocks[idx];
-
-  if(block.type==='rest') {
-    timerState = { type:'rest', remaining:block.seconds, totalSeconds:block.seconds, running:true, session:true };
-    document.getElementById('tempo-track').style.display = 'none';
+  function closeTimer() {
+    clearInterval(timerState.intervalId);
+    timerState = {};
+    workoutSession = null;
     document.getElementById('timer-video').src = '';
     document.getElementById('timer-video-wrap').style.display = 'none';
-    document.getElementById('timer-ex-name').textContent = block.label;
-    document.getElementById('timer-meta').textContent = '';
-  } else {
-    const ex = block.ex;
-    timerState = { ex, running:true, session:true };
-    document.getElementById('timer-ex-name').textContent = `${ex.name} — Set ${block.setNum}/${ex.sets}`;
-    setupWorkBlock(ex, { setNum:block.setNum, totalSets:ex.sets });
-  }
-  document.getElementById('timer-toggle-btn').textContent = '⏸ Pause';
-  updateTimerDisplay();
-  timerState.intervalId = setInterval(tickTimer, 1000);
-}
-
-function advanceSession() {
-  if(!workoutSession) { closeTimer(); return; }
-  runSessionBlock(workoutSession.idx+1);
-}
-
-function markExerciseDone(i) {
-  const dt = document.getElementById('dt-'+i);
-  if(dt) dt.classList.add('on');
-  const startBtn = document.getElementById('start-'+i);
-  if(startBtn) { startBtn.disabled = true; startBtn.textContent = '✓'; }
-}
-
-function finishSession() {
-  if(!workoutSession) { closeTimer(); return; }
-  const todayKey = todayStr();
-  const logs = getWorkoutLogs();
-  if(!logs[todayKey]) logs[todayKey] = {};
-  const completedIndexes = new Set(workoutSession.blocks.filter(b=>b.type==='work').map(b=>b.realIndex));
-  completedIndexes.forEach(i=>{
-    logs[todayKey]['ex_'+i+'_done'] = true;
-    markExerciseDone(i);
-  });
-  saveWorkoutLog(todayKey, logs[todayKey]);
-  refreshStartAllButtonState();
-  workoutSession = null;
-  timerState = {};
-  document.getElementById('timer-ex-name').textContent = '🎉 Selesai!';
-  document.getElementById('timer-phase').textContent = '';
-  document.getElementById('timer-display').textContent = '✅';
-  document.getElementById('timer-meta').textContent = 'Exercise sudah ditandai selesai & terkunci. Kerja bagus!';
-  document.getElementById('timer-toggle-btn').style.display = 'none';
-  document.getElementById('timer-skip-btn').style.display = 'none';
-  playDoneChime();
-  showToast('Workout selesai! 💪');
-  updateDashboard();
-}
-
-function saveCardio(dayKey) {
-  const speed = document.getElementById('wp-speed').value;
-  const duration = document.getElementById('wp-duration').value;
-  const logs = getWorkoutLogs();
-  if(!logs[dayKey]) logs[dayKey]={};
-  logs[dayKey].wpSpeed = speed;
-  logs[dayKey].wpDuration = duration;
-  saveWorkoutLog(dayKey, logs[dayKey]);
-  showToast('Cardio tersimpan! 🏃');
-}
-
-// ===== HISTORY =====
-function editCheckinWeight(date) {
-  const checkins = getCheckins();
-  const entry = checkins.find(c=>c.date===date);
-  if(!entry) return;
-  const val = prompt('Edit berat badan (kg):', entry.weight);
-  if(val===null) return;
-  const num = parseFloat(val);
-  if(!num || num<20 || num>300) { alert('Berat badan gak valid (20-300 kg)'); return; }
-  entry.weight = num;
-  saveCheckins(checkins);
-  renderHistory();
-  updateDashboard();
-}
-
-function deleteCheckin(date) {
-  if(!confirm('Hapus check-in tanggal ini? Gak bisa dibalikin.')) return;
-  saveCheckins(getCheckins().filter(c=>c.date!==date));
-  renderHistory();
-  updateDashboard();
-}
-
-function renderHistory() {
-  const checkins = getCheckins();
-  const profile = getProfile();
-  const tbody = document.getElementById('history-body');
-
-  if(!checkins.length) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--muted)">Belum ada data. Mulai check-in dulu!</td></tr>`;
-    return;
+    document.getElementById('timerPanel').style.display = 'none';
   }
 
-  tbody.innerHTML = [...checkins].reverse().map((c,i)=>{
-    const start = new Date(profile.startDate);
-    const entry = new Date(c.date);
-    const dayNum = Math.floor((entry-start)/(1000*60*60*24))+1;
-    const date = new Date(c.date).toLocaleDateString('id-ID',{day:'numeric',month:'short'});
-    return `<tr>
-      <td><strong>Hari ${dayNum}</strong></td>
-      <td style="color:var(--muted)">${date}</td>
-      <td>${c.weight??'—'} kg</td>
-      <td><div style="display:flex;gap:6px">
-        <button class="btn-secondary" style="padding:4px 8px;font-size:11px" onclick="editCheckinWeight('${c.date}')">✏️</button>
-        <button class="btn-secondary" style="padding:4px 8px;font-size:11px" onclick="deleteCheckin('${c.date}')">🗑</button>
-      </div></td>
-    </tr>`;
-  }).join('');
-
-  renderChart();
-}
-
-function renderChart() {
-  const checkins = getCheckins();
-  const metric = document.getElementById('chart-metric').value;
-  const canvas = document.getElementById('chartCanvas');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.offsetWidth||800, H=200;
-  canvas.width=W; canvas.height=H;
-  ctx.clearRect(0,0,W,H);
-
-  if(checkins.length<2) {
-    ctx.fillStyle='rgba(107,127,163,0.5)';
-    ctx.font='14px Space Grotesk';
-    ctx.textAlign='center';
-    ctx.fillText('Butuh minimal 2 data untuk grafik',W/2,H/2);
-    return;
+  function tickTimer() {
+    if(timerState.type==='duration') {
+      timerState.remaining--;
+      if(timerState.remaining<=0) {
+        timerState.remaining = 0;
+        timerState.running = false;
+        clearInterval(timerState.intervalId);
+        document.getElementById('timer-toggle-btn').textContent = '▶ Mulai';
+        playDoneChime();
+        if(timerState.session) setTimeout(advanceSession, 500);
+        else showToast('Waktu selesai! 🎉');
+      } else if(timerState.remaining<=3) {
+        playTick();
+      }
+    } else if(timerState.type==='rest') {
+      timerState.remaining--;
+      if(timerState.remaining<=0) {
+        timerState.remaining = 0;
+        clearInterval(timerState.intervalId);
+        playDoneChime();
+        setTimeout(advanceSession, 400);
+      } else if(timerState.remaining<=3) {
+        playTick();
+      }
+    } else if(timerState.type==='tempo') {
+      timerState.phaseRemaining--;
+      if(timerState.phaseRemaining<=0) advanceTempoPhase();
+      else playTick();
+    } else if(timerState.type==='explosive') {
+      timerState.totalSeconds++;
+    } else if(timerState.type==='interval') {
+      timerState.totalElapsed++;
+      timerState.phaseRemaining--;
+      if(timerState.totalElapsed>=timerState.totalTarget) {
+        timerState.running = false;
+        clearInterval(timerState.intervalId);
+        document.getElementById('timer-toggle-btn').textContent = '▶ Mulai';
+        const durInput = document.getElementById('wp-duration');
+        if(durInput) durInput.value = Math.round(timerState.totalElapsed/60*2)/2;
+        playDoneChime();
+        showToast('Interval walking selesai! 🏃');
+      } else if(timerState.phaseRemaining<=0) {
+        timerState.phase = timerState.phase==='fast' ? 'slow' : 'fast';
+        timerState.phaseRemaining = timerState.phase==='fast' ? timerState.fastDuration : timerState.slowDuration;
+        playPhaseTone(timerState.phase==='fast' ? 'up' : 'down');
+      } else if(timerState.phaseRemaining<=3) {
+        playTick();
+      }
+    }
+    updateTimerDisplay();
   }
 
-  const data = checkins.map(c=>c[metric]).filter(v=>v!=null);
-  const labels = checkins.filter(c=>c[metric]!=null).map(c=>{
-    return new Date(c.date).toLocaleDateString('id-ID',{day:'numeric',month:'short'});
-  });
-
-  if(data.length<2) return;
-
-  const min = Math.min(...data)*0.998;
-  const max = Math.max(...data)*1.002;
-  const pad = {l:40,r:20,t:20,b:30};
-  const gW = W-pad.l-pad.r;
-  const gH = H-pad.t-pad.b;
-
-  const toX = i => pad.l + (i/(data.length-1))*gW;
-  const toY = v => pad.t + (1-(v-min)/(max-min))*gH;
-
-  // Grid lines
-  ctx.strokeStyle='rgba(255,255,255,0.04)';
-  ctx.lineWidth=1;
-  for(let i=0;i<=4;i++) {
-    const y = pad.t + (i/4)*gH;
-    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+  function updateTimerDisplay() {
+    const phaseEl = document.getElementById('timer-phase');
+    const dispEl = document.getElementById('timer-display');
+    if(timerState.type==='duration') {
+      phaseEl.textContent = 'Durasi';
+      phaseEl.className = 'timer-phase down';
+      dispEl.textContent = formatTime(timerState.remaining);
+    } else if(timerState.type==='rest') {
+      phaseEl.textContent = '😮‍💨 Istirahat';
+      phaseEl.className = 'timer-phase hold';
+      dispEl.textContent = formatTime(timerState.remaining);
+    } else if(timerState.type==='tempo') {
+      const labels = {down:'⬇ Turun',hold:'⏸ Tahan',up:'⬆ Naik'};
+      phaseEl.textContent = labels[timerState.phase];
+      phaseEl.className = 'timer-phase '+timerState.phase;
+      dispEl.textContent = timerState.phaseRemaining;
+      document.getElementById('timer-meta').textContent =
+        `${timerState.setLabel||''}${timerState.ex.reps} reps — Rep ke-${Math.min(timerState.repCount+1,timerState.targetReps||timerState.repCount+1)} • Tempo ${timerState.tempo.join('-')}`;
+    } else if(timerState.type==='explosive') {
+      phaseEl.textContent = '⚡ Eksplosif';
+      phaseEl.className = 'timer-phase hold';
+      dispEl.textContent = formatTime(timerState.totalSeconds);
+    } else if(timerState.type==='interval') {
+      const isFast = timerState.phase==='fast';
+      phaseEl.textContent = isFast ? `⚡ CEPAT (${timerState.fastSpeed} km/h)` : `😌 Santai (${timerState.slowSpeed} km/h)`;
+      phaseEl.className = 'timer-phase '+(isFast?'up':'down');
+      dispEl.textContent = formatTime(timerState.phaseRemaining);
+      document.getElementById('timer-meta').textContent =
+        `Total: ${formatTime(timerState.totalElapsed)} / ${formatTime(timerState.totalTarget)}`;
+    }
   }
 
-  // Area fill
-  const grad = ctx.createLinearGradient(0,pad.t,0,H-pad.b);
-  grad.addColorStop(0,'rgba(59,130,246,0.3)');
-  grad.addColorStop(1,'rgba(59,130,246,0)');
-  ctx.beginPath();
-  ctx.moveTo(toX(0),toY(data[0]));
-  data.forEach((v,i)=>{ if(i>0) ctx.lineTo(toX(i),toY(v)); });
-  ctx.lineTo(toX(data.length-1),H-pad.b);
-  ctx.lineTo(toX(0),H-pad.b);
-  ctx.fillStyle=grad;
-  ctx.fill();
+  // ===== FULL WORKOUT SESSION (auto-advance through all exercises) =====
+  // entries: array of { ex, realIndex } — realIndex is the position in currentWorkoutExercises,
+  // used to mark the correct row/log entry done regardless of how the session was scoped.
+  function buildSessionBlocks(entries, profile) {
+    const restMult = GOAL_REST_MULT[profile.goal||'recomposition']||1;
+    const blocks = [];
+    entries.forEach((entry,idx)=>{
+      const ex = entry.ex;
+      for(let s=1;s<=ex.sets;s++) {
+        blocks.push({ type:'work', ex, realIndex:entry.realIndex, setNum:s, totalSets:ex.sets });
+        const lastSet = s===ex.sets;
+        const lastEntry = idx===entries.length-1;
+        if(lastSet && lastEntry) continue;
+        const restSec = lastSet ? 20 : (ex.alat==='—' ? 20 : Math.round((ex.explosive ? 45 : 60)*restMult));
+        const label = lastSet ? `Siap-siap: ${entries[idx+1].ex.name}` : `Istirahat — ${ex.name}`;
+        blocks.push({ type:'rest', seconds:restSec, label });
+      }
+    });
+    return blocks;
+  }
 
-  // Line
-  const lineGrad = ctx.createLinearGradient(0,0,W,0);
-  lineGrad.addColorStop(0,'#3B82F6');
-  lineGrad.addColorStop(1,'#06B6D4');
-  ctx.beginPath();
-  ctx.moveTo(toX(0),toY(data[0]));
-  data.forEach((v,i)=>{ if(i>0) ctx.lineTo(toX(i),toY(v)); });
-  ctx.strokeStyle=lineGrad;
-  ctx.lineWidth=2.5;
-  ctx.lineJoin='round';
-  ctx.stroke();
+  function startFullWorkout() {
+    if(!currentWorkoutExercises.length) return;
+    const todayKey = todayStr();
+    const logs = getWorkoutLogs();
+    const todayLog = logs[todayKey]||{};
+    const entries = currentWorkoutExercises
+      .map((ex,i)=>({ ex, realIndex:i }))
+      .filter(entry=>!todayLog['ex_'+entry.realIndex+'_done']);
+    if(!entries.length) return; // everything already completed, blocked
+    const profile = getProfile()||{};
+    const blocks = buildSessionBlocks(entries, profile);
+    if(!blocks.length) return;
+    workoutSession = { blocks, idx:0 };
+    document.getElementById('timerPanel').style.display = 'block';
+    document.getElementById('timer-toggle-btn').style.display = '';
+    document.getElementById('timer-skip-btn').style.display = '';
+    runSessionBlock(0);
+  }
 
-  // Dots + labels
-  data.forEach((v,i)=>{
+  function runSessionBlock(idx) {
+    if(timerState.intervalId) clearInterval(timerState.intervalId);
+    if(!workoutSession || idx>=workoutSession.blocks.length) { finishSession(); return; }
+    workoutSession.idx = idx;
+    const block = workoutSession.blocks[idx];
+
+    if(block.type==='rest') {
+      timerState = { type:'rest', remaining:block.seconds, totalSeconds:block.seconds, running:true, session:true };
+      document.getElementById('tempo-track').style.display = 'none';
+      document.getElementById('timer-video').src = '';
+      document.getElementById('timer-video-wrap').style.display = 'none';
+      document.getElementById('timer-ex-name').textContent = block.label;
+      document.getElementById('timer-meta').textContent = '';
+    } else {
+      const ex = block.ex;
+      timerState = { ex, running:true, session:true };
+      document.getElementById('timer-ex-name').textContent = `${ex.name} — Set ${block.setNum}/${ex.sets}`;
+      setupWorkBlock(ex, { setNum:block.setNum, totalSets:ex.sets });
+    }
+    document.getElementById('timer-toggle-btn').textContent = '⏸ Pause';
+    updateTimerDisplay();
+    timerState.intervalId = setInterval(tickTimer, 1000);
+  }
+
+  function advanceSession() {
+    if(!workoutSession) { closeTimer(); return; }
+    runSessionBlock(workoutSession.idx+1);
+  }
+
+  function markExerciseDone(i) {
+    const dt = document.getElementById('dt-'+i);
+    if(dt) dt.classList.add('on');
+    const startBtn = document.getElementById('start-'+i);
+    if(startBtn) { startBtn.disabled = true; startBtn.textContent = '✓'; }
+  }
+
+  function finishSession() {
+    if(!workoutSession) { closeTimer(); return; }
+    const todayKey = todayStr();
+    const logs = getWorkoutLogs();
+    if(!logs[todayKey]) logs[todayKey] = {};
+    const completedIndexes = new Set(workoutSession.blocks.filter(b=>b.type==='work').map(b=>b.realIndex));
+    completedIndexes.forEach(i=>{
+      logs[todayKey]['ex_'+i+'_done'] = true;
+      markExerciseDone(i);
+    });
+    saveWorkoutLog(todayKey, logs[todayKey]);
+    refreshStartAllButtonState();
+    workoutSession = null;
+    timerState = {};
+    document.getElementById('timer-ex-name').textContent = '🎉 Selesai!';
+    document.getElementById('timer-phase').textContent = '';
+    document.getElementById('timer-display').textContent = '✅';
+    document.getElementById('timer-meta').textContent = 'Exercise sudah ditandai selesai & terkunci. Kerja bagus!';
+    document.getElementById('timer-toggle-btn').style.display = 'none';
+    document.getElementById('timer-skip-btn').style.display = 'none';
+    playDoneChime();
+    showToast('Workout selesai! 💪');
+    updateDashboard();
+  }
+
+  function saveCardio(dayKey) {
+    const speed = document.getElementById('wp-speed').value;
+    const duration = document.getElementById('wp-duration').value;
+    const logs = getWorkoutLogs();
+    if(!logs[dayKey]) logs[dayKey]={};
+    logs[dayKey].wpSpeed = speed;
+    logs[dayKey].wpDuration = duration;
+    saveWorkoutLog(dayKey, logs[dayKey]);
+    showToast('Cardio tersimpan! 🏃');
+  }
+
+  // ===== HISTORY =====
+  function editCheckinWeight(date) {
+    const checkins = getCheckins();
+    const entry = checkins.find(c=>c.date===date);
+    if(!entry) return;
+    const val = prompt('Edit berat badan (kg):', entry.weight);
+    if(val===null) return;
+    const num = parseFloat(val);
+    if(!num || num<20 || num>300) { alert('Berat badan gak valid (20-300 kg)'); return; }
+    entry.weight = num;
+    saveCheckins(checkins);
+    renderHistory();
+    updateDashboard();
+  }
+
+  function deleteCheckin(date) {
+    if(!confirm('Hapus check-in tanggal ini? Gak bisa dibalikin.')) return;
+    saveCheckins(getCheckins().filter(c=>c.date!==date));
+    renderHistory();
+    updateDashboard();
+  }
+
+  function renderHistory() {
+    const checkins = getCheckins();
+    const profile = getProfile();
+    const tbody = document.getElementById('history-body');
+
+    if(!checkins.length) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--muted)">Belum ada data. Mulai check-in dulu!</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = [...checkins].reverse().map((c,i)=>{
+      const start = new Date(profile.startDate);
+      const entry = new Date(c.date);
+      const dayNum = Math.floor((entry-start)/(1000*60*60*24))+1;
+      const date = new Date(c.date).toLocaleDateString('id-ID',{day:'numeric',month:'short'});
+      return `<tr>
+        <td><strong>Hari ${dayNum}</strong></td>
+        <td style="color:var(--muted)">${date}</td>
+        <td>${c.weight??'—'} kg</td>
+        <td><div style="display:flex;gap:6px">
+          <button class="btn-secondary" style="padding:4px 8px;font-size:11px" onclick="editCheckinWeight('${c.date}')">✏️</button>
+          <button class="btn-secondary" style="padding:4px 8px;font-size:11px" onclick="deleteCheckin('${c.date}')">🗑</button>
+        </div></td>
+      </tr>`;
+    }).join('');
+
+    renderChart();
+  }
+
+  function renderChart() {
+    const checkins = getCheckins();
+    const metric = document.getElementById('chart-metric').value;
+    const canvas = document.getElementById('chartCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.offsetWidth||800, H=200;
+    canvas.width=W; canvas.height=H;
+    ctx.clearRect(0,0,W,H);
+
+    if(checkins.length<2) {
+      ctx.fillStyle='rgba(107,127,163,0.5)';
+      ctx.font='14px Space Grotesk';
+      ctx.textAlign='center';
+      ctx.fillText('Butuh minimal 2 data untuk grafik',W/2,H/2);
+      return;
+    }
+
+    const data = checkins.map(c=>c[metric]).filter(v=>v!=null);
+    const labels = checkins.filter(c=>c[metric]!=null).map(c=>{
+      return new Date(c.date).toLocaleDateString('id-ID',{day:'numeric',month:'short'});
+    });
+
+    if(data.length<2) return;
+
+    const min = Math.min(...data)*0.998;
+    const max = Math.max(...data)*1.002;
+    const pad = {l:40,r:20,t:20,b:30};
+    const gW = W-pad.l-pad.r;
+    const gH = H-pad.t-pad.b;
+
+    const toX = i => pad.l + (i/(data.length-1))*gW;
+    const toY = v => pad.t + (1-(v-min)/(max-min))*gH;
+
+    // Grid lines
+    ctx.strokeStyle='rgba(255,255,255,0.04)';
+    ctx.lineWidth=1;
+    for(let i=0;i<=4;i++) {
+      const y = pad.t + (i/4)*gH;
+      ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+    }
+
+    // Area fill
+    const grad = ctx.createLinearGradient(0,pad.t,0,H-pad.b);
+    grad.addColorStop(0,'rgba(59,130,246,0.3)');
+    grad.addColorStop(1,'rgba(59,130,246,0)');
     ctx.beginPath();
-    ctx.arc(toX(i),toY(v),4,0,Math.PI*2);
-    ctx.fillStyle='#3B82F6';
+    ctx.moveTo(toX(0),toY(data[0]));
+    data.forEach((v,i)=>{ if(i>0) ctx.lineTo(toX(i),toY(v)); });
+    ctx.lineTo(toX(data.length-1),H-pad.b);
+    ctx.lineTo(toX(0),H-pad.b);
+    ctx.fillStyle=grad;
     ctx.fill();
-    ctx.strokeStyle=var_bg();
-    ctx.lineWidth=2;
+
+    // Line
+    const lineGrad = ctx.createLinearGradient(0,0,W,0);
+    lineGrad.addColorStop(0,'#3B82F6');
+    lineGrad.addColorStop(1,'#06B6D4');
+    ctx.beginPath();
+    ctx.moveTo(toX(0),toY(data[0]));
+    data.forEach((v,i)=>{ if(i>0) ctx.lineTo(toX(i),toY(v)); });
+    ctx.strokeStyle=lineGrad;
+    ctx.lineWidth=2.5;
+    ctx.lineJoin='round';
     ctx.stroke();
 
-    if(i===0||i===data.length-1||data.length<=7) {
-      ctx.fillStyle='rgba(240,244,255,0.7)';
-      ctx.font='11px Space Grotesk';
-      ctx.textAlign='center';
-      ctx.fillText(v, toX(i), toY(v)-10);
-    }
-  });
+    // Dots + labels
+    data.forEach((v,i)=>{
+      ctx.beginPath();
+      ctx.arc(toX(i),toY(v),4,0,Math.PI*2);
+      ctx.fillStyle='#3B82F6';
+      ctx.fill();
+      ctx.strokeStyle=var_bg();
+      ctx.lineWidth=2;
+      ctx.stroke();
 
-  // X labels
-  ctx.fillStyle='rgba(107,127,163,0.8)';
-  ctx.font='10px Space Grotesk';
-  const step = Math.ceil(labels.length/6);
-  labels.forEach((l,i)=>{
-    if(i%step===0||i===labels.length-1) {
-      ctx.textAlign='center';
-      ctx.fillText(l,toX(i),H-6);
-    }
-  });
+      if(i===0||i===data.length-1||data.length<=7) {
+        ctx.fillStyle='rgba(240,244,255,0.7)';
+        ctx.font='11px Space Grotesk';
+        ctx.textAlign='center';
+        ctx.fillText(v, toX(i), toY(v)-10);
+      }
+    });
 
-  // Y axis
-  ctx.fillStyle='rgba(107,127,163,0.8)';
-  ctx.font='10px Space Grotesk';
-  ctx.textAlign='right';
-  ctx.fillText(max.toFixed(1),pad.l-4,pad.t+10);
-  ctx.fillText(min.toFixed(1),pad.l-4,H-pad.b);
-}
+    // X labels
+    ctx.fillStyle='rgba(107,127,163,0.8)';
+    ctx.font='10px Space Grotesk';
+    const step = Math.ceil(labels.length/6);
+    labels.forEach((l,i)=>{
+      if(i%step===0||i===labels.length-1) {
+        ctx.textAlign='center';
+        ctx.fillText(l,toX(i),H-6);
+      }
+    });
 
-function var_bg() { return '#080B14'; }
+    // Y axis
+    ctx.fillStyle='rgba(107,127,163,0.8)';
+    ctx.font='10px Space Grotesk';
+    ctx.textAlign='right';
+    ctx.fillText(max.toFixed(1),pad.l-4,pad.t+10);
+    ctx.fillText(min.toFixed(1),pad.l-4,H-pad.b);
+  }
 
-// ===== NAVIGATION =====
-function showPage(name, btn) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('page-'+name).classList.add('active');
-  if(btn) btn.classList.add('active');
+  function var_bg() { return '#080B14'; }
 
-  if(name==='history') renderHistory();
-  if(name==='workout') renderWorkoutPage();
-  if(name==='dashboard') { loadTodayChecks(); updateDashboard(); }
-}
+  // ===== NAVIGATION =====
+  function showPage(name, btn) {
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById('page-'+name).classList.add('active');
+    if(btn) btn.classList.add('active');
 
-// ===== TOAST =====
-function showToast(msg, color='#10B981') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.background = color;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2800);
-}
+    if(name==='history') renderHistory();
+    if(name==='workout') renderWorkoutPage();
+    if(name==='dashboard') { loadTodayChecks(); updateDashboard(); }
+  }
 
-// ===== START =====
-window.onload = () => {
-  drawRing(0);
-  initApp();
-};
-</script>
-</body>
-</html>
+  // ===== TOAST =====
+  function showToast(msg, color='#10B981') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.background = color;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),2800);
+  }
+
+  // ===== START =====
+  window.onload = () => {
+    drawRing(0);
+    initApp();
+  };
+  </script>
+  </body>
+  </html>
